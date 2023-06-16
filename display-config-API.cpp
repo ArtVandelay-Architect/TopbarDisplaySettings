@@ -18,7 +18,7 @@
 
 void get_current_state (GDBusConnection *connection,
                         GVariant        *currentStatePointer,
-                        displayState    *currentDisplayState)
+                        DisplayState    *currentDisplayState)
 {
 	GVariant *state;
 	state = g_dbus_connection_call_sync (connection,
@@ -54,9 +54,11 @@ void get_current_state (GDBusConnection *connection,
 	
 }
 
-void construct_monitors (displayState *CurrentDisplayState,
+void construct_monitors (DisplayState *currentDisplayState,
                          GVariantIter *monitors,
 			 GVariantIter *logicalMonitors)
 {
-	
+	while (1) {
+		
+	}
 }
