@@ -28,6 +28,8 @@
 int
 main ()
 {
+	std::cout << CURRENT_STATE_FORMAT << "\n";
+	/*
 	GDBusConnection *connection;
 	GError *error = NULL;
 
@@ -41,6 +43,56 @@ main ()
 		return 1;
 	}
 
+	GVariant *state;
+	state = g_dbus_connection_call_sync (connection,
+	                                     "org.gnome.Mutter.DisplayConfig",
+	                                     "/org/gnome/Mutter/DisplayConfig",
+	                                     "org.gnome.Mutter.DisplayConfig",
+	                                     "GetCurrentState",
+	                                     NULL,
+	                                     NULL,
+	                                     G_DBUS_CALL_FLAGS_NO_AUTO_START,
+	                                     -1,
+	                                     NULL,
+	                                     NULL);
 
-	return EXIT_SUCCESS;
+	guint32 serial = NULL;
+	GVariant *monitorsArray = NULL;
+	GVariant *logicalMonitorsArray = NULL;
+	GVariant *propsArray = NULL;
+
+	g_variant_get (state,
+	               CURRENT_STATE_FORMAT,
+		       &serial,
+		       &monitorsArray,
+		       &logicalMonitorsArray,
+		       &propsArray);	
+
+	GVariant *newState = g_variant_new ("(uu@*@*)",
+	                                    serial,
+					    2,
+					    logicalMonitorsArray,
+					    propsArray);
+
+	g_dbus_connection_call_sync (connection,
+	                            "org.gnome.Mutter.DisplayConfig",
+	                            "/org/gnome/Mutter/DisplayConfig",
+	                            "org.gnome.Mutter.DisplayConfig",
+	                            "ApplyMonitorsConfig",
+				    newState,
+				    NULL,
+				    G_DBUS_CALL_FLAGS_NO_AUTO_START,
+				    -1,
+				    NULL,
+				    NULL);
+
+
+	g_variant_unref (monitorsArray);
+	g_variant_unref (logicalMonitorsArray);
+	g_variant_unref (propsArray);
+
+	g_variant_unref (state);
+	g_variant_unref (newState);
+*/
+	return 0;
 }
