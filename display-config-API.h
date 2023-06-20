@@ -24,6 +24,19 @@
 #ifndef DISPLAY_CONFIG_API_H
 #define DISPLAY_CONFIG_API_H
 
+/*
+MODE_BASE_FORMAT: siiddad
+MODE_FORMAT: (siiddada{sv})
+MODES_FORMAT: a(siiddada{sv})
+MONITOR_SPEC_FORMAT: (ssss)
+MONITOR_FORMAT: ((ssss)a(siiddada{sv})a{sv})
+MONITORS_FORMAT: a((ssss)a(siiddada{sv})a{sv})
+LOGICAL_MONITOR_MONITORS_FORMAT: a(ssss)
+LOGICAL_MONITOR_FORMAT: (iiduba(ssss)a{sv})
+LOGICAL_MONITORS_FORMAT: a(iiduba(ssss)a{sv})
+LOGICAL_MONITOR_ATFORMAT: @(iiduba(ssss)a{sv})
+CURRENT_STATE_FORMAT: (ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})
+*/
 
 #define MODE_BASE_FORMAT "siiddad"
 #define MODE_FORMAT "(" MODE_BASE_FORMAT "a{sv})"

@@ -28,7 +28,6 @@
 int
 main ()
 {
-	std::cout << CURRENT_STATE_FORMAT << "\n";
 	/*
 	GDBusConnection *connection;
 	GError *error = NULL;
