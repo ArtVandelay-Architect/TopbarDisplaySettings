@@ -1,13 +1,14 @@
 #include "display-config-API.h"
 #include <gio/gio.h>
 #include <glib-object.h>
-
+#include <iostream>
 
 void 
 update_display_state (DisplayState &displayState) 
 {
+	std::cout << "Calling Dbus\n";
 	GVariant *state;
-	state = g_dbus_connection_call_sync (dbusConnection,
+	state = g_dbus_connection_call_sync (mainDbusConnection,
 	                                     "org.gnome.Mutter.DisplayConfig",
 	                                     "/org/gnome/Mutter/DisplayConfig",
 	                                     "org.gnome.Mutter.DisplayConfig",
@@ -24,6 +25,7 @@ update_display_state (DisplayState &displayState)
 	GVariantIter *logicalMonitors;
 	GVariantIter *props;
 
+	std::cout << "Dissecting variant\n";
 	g_variant_get (state,
 	               CURRENT_STATE_FORMAT,
 		       &serial,
@@ -31,10 +33,14 @@ update_display_state (DisplayState &displayState)
 		       &logicalMonitors,
 		       &props);
 
+	std::cout << "Constructing serial\n";
 	displayState.serial = (int) serial;
+	std::cout << "Constructing monitors\n";
 	construct_monitors (monitors, displayState);
+	std::cout << "Constructing logical monitors\n";
 	construct_logical_monitors (logicalMonitors, displayState);	
-
+	std::cout << "Constructing props\n";
+	displayState.props = construct_propsmap (props);
 }
 
 void
@@ -46,6 +52,7 @@ construct_monitors (GVariantIter *monitors,
 	GVariantIter *modes = NULL;
 	GVariantIter *props = NULL;
 	while (g_variant_iter_next (monitors, "@" MONITOR_FORMAT, &monitorPtr)) {
+		std::cout << "Dissecting monitor variant\n";
 		g_variant_get (monitorPtr,
 		               MONITOR_FORMAT,
 			       &connector,
@@ -54,6 +61,7 @@ construct_monitors (GVariantIter *monitors,
 			       &serial,
 			       &modes,
 			       &props);
+		std::cout << "Done dissecting monitor variant\n";
 		Monitor monitor;
 		monitor.connector = std::string (connector);
 		monitor.vendor = std::string (vendor);
@@ -63,9 +71,9 @@ construct_monitors (GVariantIter *monitors,
 		monitor.props = construct_propsmap (props);
 
 		displayState.monitors.push_back (monitor);
-	}
 
-	g_variant_unref (monitorPtr);
+		g_variant_unref (monitorPtr);
+	}
 	g_variant_iter_free (modes);
 	g_variant_iter_free (props);
 }
@@ -81,7 +89,9 @@ construct_modes (GVariantIter *modes,
 	GVariantIter *supportedScales = NULL;
 	GVariantIter *props = NULL;
 	
-	while (g_variant_iter_next (modes, "@" MODE_FORMAT, modePtr)) {
+	while (g_variant_iter_next (modes, "@" MODE_FORMAT, &modePtr)) {
+		std::cout << "Dissecting mode variant\n";
+		printf("modePtr: %d\n", modePtr);
 		g_variant_get (modePtr,
 		               MODE_FORMAT,
 		               &id,
@@ -91,6 +101,7 @@ construct_modes (GVariantIter *modes,
 			       &prefScale,
 			       &supportedScales,
 			       &props);
+		std::cout << "Done dissecting mode variant\n";
 		Mode mode;
 		mode.id = std::string(id);
 		mode.width = width;
@@ -106,9 +117,9 @@ construct_modes (GVariantIter *modes,
 		mode.props = construct_propsmap (props);
 
 		monitor.modes.push_back(mode);
-	}
 
-	g_variant_unref (modePtr);
+		g_variant_unref (modePtr);
+	}
 	g_variant_iter_free (supportedScales);
 	g_variant_iter_free (props);
 }
@@ -137,7 +148,7 @@ construct_logical_monitors (GVariantIter *logicalMonitors,
 		logicalMonitor.x = x;
 		logicalMonitor.y = y;
 		logicalMonitor.scale = scale;
-		logicalMonitor.transform = transform;
+		logicalMonitor.transform = (int) transform;
 		logicalMonitor.primary = primary;
 		
 		GVariant *monitorSpecPtr = NULL;
@@ -145,20 +156,23 @@ construct_logical_monitors (GVariantIter *logicalMonitors,
 		while (g_variant_iter_next (monitorSpecs, "@" MONITOR_SPEC_FORMAT, &monitorSpecPtr)) {
 			g_variant_get (monitorSpecPtr,
 			               MONITOR_SPEC_FORMAT,
-				       connector,
-				       vendor,
-				       product,
-				       serial);
+				       &connector,
+				       &vendor,
+				       &product,
+				       &serial);
 			MonitorSpec monitorSpec;
 			monitorSpec.connector = std::string (connector);
 			monitorSpec.vendor = std::string (vendor);
 			monitorSpec.product = std::string (product);
 			monitorSpec.serial = std::string (serial);
 			logicalMonitor.monitors.push_back(monitorSpec);
-		}
 
-		displayState.logicalMonitors.push_back(logicalMonitor);		
+			g_variant_unref (monitorSpecPtr);
+		}
+		displayState.logicalMonitors.push_back(logicalMonitor);	
+		g_variant_unref (logicalMonitorPtr);	
 	}
+	g_variant_iter_free (monitorSpecs);
 }
 
 propsmap 
@@ -170,9 +184,9 @@ construct_propsmap (GVariantIter *props)
 	while (g_variant_iter_next (props, "{&sv}", &cstr, &var)) {
 		std::string cppstr(cstr);
 		newPropsmap[cppstr] = var;
-	}
 
-	g_variant_unref(var);
+		g_variant_unref(var);
+	}
 	return newPropsmap;
 }
 

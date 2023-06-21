@@ -56,7 +56,7 @@ CURRENT_STATE_FORMAT: (ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})
 
 typedef std::unordered_map<std::string, GVariant *> propsmap;
 
-GDBusConnection *dbusConnection;
+extern GDBusConnection *mainDbusConnection;
 
 // ---
 // Structures responsible for processing `getCurrentState`

@@ -25,16 +25,17 @@
 #include <gio/gio.h>
 #include <glib.h>
 
+GDBusConnection *mainDbusConnection;
+
+
 int
 main ()
 {
-	/*
-	GDBusConnection *connection;
+	std::cout << "Getting Bus...\n";
 	GError *error = NULL;
-
-	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, 
-	                             NULL, 
-				     &error);
+	mainDbusConnection = g_bus_get_sync (G_BUS_TYPE_SESSION, 
+	                                     NULL, 
+				             &error);
 	if (error != NULL) {
 		g_printerr("Unable to connect to the D-Bus session bus: %s\n", 
 		           error->message);
@@ -42,56 +43,9 @@ main ()
 		return 1;
 	}
 
-	GVariant *state;
-	state = g_dbus_connection_call_sync (connection,
-	                                     "org.gnome.Mutter.DisplayConfig",
-	                                     "/org/gnome/Mutter/DisplayConfig",
-	                                     "org.gnome.Mutter.DisplayConfig",
-	                                     "GetCurrentState",
-	                                     NULL,
-	                                     NULL,
-	                                     G_DBUS_CALL_FLAGS_NO_AUTO_START,
-	                                     -1,
-	                                     NULL,
-	                                     NULL);
+	std::cout << "Getting State...\n";
+	DisplayState displayState;
+	update_display_state(displayState);
 
-	guint32 serial = NULL;
-	GVariant *monitorsArray = NULL;
-	GVariant *logicalMonitorsArray = NULL;
-	GVariant *propsArray = NULL;
-
-	g_variant_get (state,
-	               CURRENT_STATE_FORMAT,
-		       &serial,
-		       &monitorsArray,
-		       &logicalMonitorsArray,
-		       &propsArray);	
-
-	GVariant *newState = g_variant_new ("(uu@*@*)",
-	                                    serial,
-					    2,
-					    logicalMonitorsArray,
-					    propsArray);
-
-	g_dbus_connection_call_sync (connection,
-	                            "org.gnome.Mutter.DisplayConfig",
-	                            "/org/gnome/Mutter/DisplayConfig",
-	                            "org.gnome.Mutter.DisplayConfig",
-	                            "ApplyMonitorsConfig",
-				    newState,
-				    NULL,
-				    G_DBUS_CALL_FLAGS_NO_AUTO_START,
-				    -1,
-				    NULL,
-				    NULL);
-
-
-	g_variant_unref (monitorsArray);
-	g_variant_unref (logicalMonitorsArray);
-	g_variant_unref (propsArray);
-
-	g_variant_unref (state);
-	g_variant_unref (newState);
-*/
 	return 0;
 }
