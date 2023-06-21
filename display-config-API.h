@@ -56,7 +56,7 @@ CURRENT_STATE_FORMAT: (ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})
 
 typedef std::unordered_map<std::string, GVariant *> propsmap;
 
-GDBusConnection *connection;
+GDBusConnection *dbusConnection;
 
 // ---
 // Structures responsible for processing `getCurrentState`
@@ -69,6 +69,10 @@ struct Mode {
 	double              preferredScale;
 	std::vector<double> supportedScales;
 	propsmap            props;
+
+	Mode() 
+		: id(), width(0), height(0), refreshRate(0.0), preferredScale(0.0), supportedScales(), props() 
+	{}
 };
 
 struct MonitorSpec {
@@ -76,6 +80,10 @@ struct MonitorSpec {
 	std::string vendor;
 	std::string product;
 	std::string serial;
+
+	MonitorSpec()  
+		: connector(), vendor(), product(), serial() 
+	{}
 };
 
 struct LogicalMonitor {
@@ -86,6 +94,10 @@ struct LogicalMonitor {
 	bool                     primary;
 	std::vector<MonitorSpec> monitors;
 	propsmap                 props;
+
+	LogicalMonitor() 
+		: x(0), y(0), scale(0.0), transform(0), primary(false), monitors(), props() 
+	{}
 };
 
 struct Monitor {
@@ -95,6 +107,10 @@ struct Monitor {
 	std::string       serial;
 	std::vector<Mode> modes;
 	propsmap          props;
+
+	Monitor()
+		: connector(), vendor(), product(), serial(), modes(), props()
+	{}
 };
 
 struct DisplayState {
@@ -102,6 +118,10 @@ struct DisplayState {
 	std::vector<Monitor>        monitors;
 	std::vector<LogicalMonitor> logicalMonitors;
 	propsmap                    props;
+
+	DisplayState()
+		: serial(0), monitors(), logicalMonitors(), props()
+	{}
 };
 
 // ---
@@ -111,6 +131,10 @@ struct MonitorConf {
 	std::string connector;
 	std::string modeID;
 	propsmap    props;
+
+	MonitorConf()
+		: connector(), modeID(), props()
+	{}
 };
 
 struct LogicalMonitorConf {
@@ -120,6 +144,10 @@ struct LogicalMonitorConf {
 	int                      transform;
 	bool                     primary;
 	std::vector<MonitorConf> monitors;
+
+	LogicalMonitorConf()
+		: x(0), y(0), scale(0.0), transform(0), primary(false), monitors()
+	{}
 };
 
 struct DisplayConfig {
@@ -127,6 +155,10 @@ struct DisplayConfig {
 	int                             method;
 	std::vector<LogicalMonitorConf> logicalmonitors;
 	propsmap                        props;
+
+	DisplayConfig()
+		: serial(0), method(0), logicalmonitors(), props()
+	{}
 };
 
 // ---
@@ -136,6 +168,8 @@ struct DisplayConfig {
 void           update_display_state       (DisplayState &displayState);
 void           construct_monitors         (GVariantIter *monitors,
                                            DisplayState &displayState);
+void           construct_modes            (GVariantIter *modes,
+                                           Monitor      &monitor);
 void           construct_logical_monitors (GVariantIter *logicalMonitors,
                                            DisplayState &displayState);
 					
