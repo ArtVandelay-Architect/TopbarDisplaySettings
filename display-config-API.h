@@ -20,6 +20,8 @@
 
 #include <gio/gio.h>
 #include <vector>
+#include <unordered_map>
+#include <string>
 
 #ifndef DISPLAY_CONFIG_API_H
 #define DISPLAY_CONFIG_API_H
@@ -52,28 +54,90 @@ CURRENT_STATE_FORMAT: (ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})
 
 #define CURRENT_STATE_FORMAT "(u" MONITORS_FORMAT LOGICAL_MONITORS_FORMAT "a{sv})"
 
-struct DisplayState {
-	guint32                *serial;
-	GList                  *monitors;
-	GHashTable             *logicalMonitors;
+typedef std::unordered_map<std::string, GVariant *> propsmap;
+
+GDBusConnection *connection;
+
+// ---
+// Structures responsible for processing `getCurrentState`
+
+struct Mode {
+	std::string         id;
+	int                 width;
+	int                 height;
+	double              refreshRate;
+	double              preferredScale;
+	std::vector<double> supportedScales;
+	propsmap            props;
+};
+
+struct MonitorSpec {
+	std::string connector;
+	std::string vendor;
+	std::string product;
+	std::string serial;
 };
 
 struct LogicalMonitor {
-	int    x;               //Resolution X
-	int    y;               //Resolution Y
-	double scale;           //Display scale
-	int    rotation;	//Rotation in degrees, negative = flipped
-	int    isPrimary;	//0 = not primary
+	int                      x;
+	int                      y;
+	double                   scale;
+	int                      transform;
+	bool                     primary;
+	std::vector<MonitorSpec> monitors;
+	propsmap                 props;
 };
 
-//std::vector<LogicalMonitor> logicalMonitors;
-//guint32 globalSerial;
+struct Monitor {
+	std::string       connector;
+	std::string       vendor;
+	std::string       product;
+	std::string       serial;
+	std::vector<Mode> modes;
+	propsmap          props;
+};
 
-//Gets the current state of monitors from DBus in a synchronised manner, updating the 
-//`displayState` structure afterwards
-void	        get_current_state	(GDBusConnection *connection,
-                                         GVariant        *currentStatePointer);
+struct DisplayState {
+	int                         serial;
+	std::vector<Monitor>        monitors;
+	std::vector<LogicalMonitor> logicalMonitors;
+	propsmap                    props;
+};
 
-void            update_monitors      (GVariantIter    *logicalMonitorsIter);
+// ---
+// Structures responsible for processing `applyMonitorsConfig`
 
+struct MonitorConf {
+	std::string connector;
+	std::string modeID;
+	propsmap    props;
+};
+
+struct LogicalMonitorConf {
+	int                      x;
+	int                      y;
+	double                   scale;
+	int                      transform;
+	bool                     primary;
+	std::vector<MonitorConf> monitors;
+};
+
+struct DisplayConfig {
+	int                             serial;
+	int                             method;
+	std::vector<LogicalMonitorConf> logicalmonitors;
+	propsmap                        props;
+};
+
+// ---
+// Functions
+
+//Updates the `DisplayState` passed into the function by calling `getCurrentState`
+void           update_display_state       (DisplayState &displayState);
+void           construct_monitors         (GVariantIter *monitors,
+                                           DisplayState &displayState);
+void           construct_logical_monitors (GVariantIter *logicalMonitors,
+                                           DisplayState &displayState);
+					
+propsmap       construct_propsmap         (GVariantIter *props);
 #endif
