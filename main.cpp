@@ -47,5 +47,7 @@ main ()
 	DisplayState displayState;
 	update_display_state(displayState);
 
+	std::cout << displayState.logicalMonitors[0].monitors[0].connector << "<<<<\n";
+	
 	return 0;
 }
