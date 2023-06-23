@@ -1,3 +1,23 @@
+/* display-config-API.cpp
+ *
+ * Copyright 2023 Luke Li
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "display-config-API.h"
 #include <gio/gio.h>
 #include <glib-object.h>
@@ -19,6 +39,9 @@ update_display_state (DisplayState &displayState)
 	                                     -1,
 	                                     NULL,
 	                                     NULL);
+
+	if (!state)
+		return;
 	
 	guint32 serial;
 	GVariantIter *monitors;
@@ -41,6 +64,8 @@ update_display_state (DisplayState &displayState)
 	construct_logical_monitors (logicalMonitors, displayState);	
 	std::cout << "Constructing props\n";
 	displayState.props = construct_propsmap (props);
+
+	std::cout << "State constructed!\n";
 }
 
 void
@@ -52,7 +77,7 @@ construct_monitors (GVariantIter *monitors,
 	GVariantIter *modes = NULL;
 	GVariantIter *props = NULL;
 	while (g_variant_iter_next (monitors, "@" MONITOR_FORMAT, &monitorPtr)) {
-		std::cout << "Dissecting monitor variant\n";
+		//std::cout << "Dissecting monitor variant\n";
 		g_variant_get (monitorPtr,
 		               MONITOR_FORMAT,
 			       &connector,
@@ -61,7 +86,7 @@ construct_monitors (GVariantIter *monitors,
 			       &serial,
 			       &modes,
 			       &props);
-		std::cout << "Done dissecting monitor variant\n";
+		//std::cout << "Done dissecting monitor variant\n";
 		Monitor monitor;
 		monitor.connector = std::string (connector);
 		monitor.vendor = std::string (vendor);
@@ -90,8 +115,8 @@ construct_modes (GVariantIter *modes,
 	GVariantIter *props = NULL;
 	
 	while (g_variant_iter_next (modes, "@" MODE_FORMAT, &modePtr)) {
-		std::cout << "Dissecting mode variant\n";
-		printf("modePtr: %d\n", modePtr);
+		//std::cout << "Dissecting mode variant\n";
+		//printf("modePtr: %d\n", modePtr);
 		g_variant_get (modePtr,
 		               MODE_FORMAT,
 		               &id,
@@ -101,7 +126,7 @@ construct_modes (GVariantIter *modes,
 			       &prefScale,
 			       &supportedScales,
 			       &props);
-		std::cout << "Done dissecting mode variant\n";
+		//std::cout << "Done dissecting mode variant\n";
 		Mode mode;
 		mode.id = std::string(id);
 		mode.width = width;
@@ -190,3 +215,39 @@ construct_propsmap (GVariantIter *props)
 	return newPropsmap;
 }
 
+GVariant * 
+apply_display_state (const DisplayState &displayState)
+{
+	GVariant * logicalMonitorParameters = config_logical_monitors(displayState);
+
+	//Config props
+	GVariantBuilder propsBuilder;
+	g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
+	bool sclm = false; //supports changing layout mode
+	std::string key("supports-changing-layout-mode");
+	if (displayState.props.count(key) > 0) 
+		sclm = g_variant_get_boolean (displayState.props.at(key));
+	if (sclm) {
+		guint32 layoutMode = g_variant_get_uint32 (displayState.props.at("layout-mode"));
+		g_variant_builder_add (&propsBuilder, "{sv}", "layout-mode", g_variant_new_uint32 (layoutMode));
+	}
+	GVariant * propsParameters = g_variant_builder_end (&propsBuilder);
+
+	GVariant * displayParametersVerify = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
+	                                                    displayState.serial,
+	                                                    APPLY_MONITOR_CONFIG_METHOD_VERIFY,
+							    NULL);
+	return nullptr;
+}
+
+GVariant * 
+config_logical_monitors (const DisplayState &displayState)
+{
+	return nullptr;
+}
+
+GVariant * 
+config_monitors_conf (const DisplayState &displayState)
+{
+	return nullptr;
+}

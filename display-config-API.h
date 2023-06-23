@@ -27,32 +27,38 @@
 #define DISPLAY_CONFIG_API_H
 
 /*
-MODE_BASE_FORMAT: siiddad
 MODE_FORMAT: (siiddada{sv})
-MODES_FORMAT: a(siiddada{sv})
 MONITOR_SPEC_FORMAT: (ssss)
 MONITOR_FORMAT: ((ssss)a(siiddada{sv})a{sv})
-MONITORS_FORMAT: a((ssss)a(siiddada{sv})a{sv})
-LOGICAL_MONITOR_MONITORS_FORMAT: a(ssss)
 LOGICAL_MONITOR_FORMAT: (iiduba(ssss)a{sv})
 LOGICAL_MONITORS_FORMAT: a(iiduba(ssss)a{sv})
 LOGICAL_MONITOR_ATFORMAT: @(iiduba(ssss)a{sv})
 CURRENT_STATE_FORMAT: (ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})
+MONITOR_CONF: ssa{sv}
+LOGICAL_MONITOR_CONF: iiduba(ssa{sv})
+APPLY_MONITOR_CONFIG_PARAMETER: (uua(iiduba(ssa{sv}))a{sv})
 */
 
-#define MODE_BASE_FORMAT "siiddad"
-#define MODE_FORMAT "(" MODE_BASE_FORMAT "a{sv})"
-#define MODES_FORMAT "a" MODE_FORMAT
-#define MONITOR_SPEC_FORMAT "(ssss)"
-#define MONITOR_FORMAT "(" MONITOR_SPEC_FORMAT MODES_FORMAT "a{sv})"
-#define MONITORS_FORMAT "a" MONITOR_FORMAT
+//Formats associated with `getCurrentState`
+#define MODE_FORMAT "(siiddada{sv})"
 
-#define LOGICAL_MONITOR_MONITORS_FORMAT "a" MONITOR_SPEC_FORMAT
-#define LOGICAL_MONITOR_FORMAT "(iidub" LOGICAL_MONITOR_MONITORS_FORMAT "a{sv})"
+#define MONITOR_SPEC_FORMAT "(ssss)"
+#define MONITOR_FORMAT "(" MONITOR_SPEC_FORMAT "a" MODE_FORMAT "a{sv})"
+
+#define LOGICAL_MONITOR_FORMAT "(iidub" "a" MONITOR_SPEC_FORMAT "a{sv})"
 #define LOGICAL_MONITORS_FORMAT "a" LOGICAL_MONITOR_FORMAT
 #define LOGICAL_MONITOR_ATFORMAT "@" LOGICAL_MONITOR_FORMAT
 
-#define CURRENT_STATE_FORMAT "(u" MONITORS_FORMAT LOGICAL_MONITORS_FORMAT "a{sv})"
+#define CURRENT_STATE_FORMAT "(u" "a" MONITOR_FORMAT LOGICAL_MONITORS_FORMAT "a{sv})"
+
+//Formats associated with `applyMonitorsConfig`
+#define MONITOR_CONF "ssa{sv}"
+#define LOGICAL_MONITOR_CONF "iiduba(" MONITOR_CONF ")"
+#define APPLY_MONITOR_CONFIG_PARAMETER "(uua(" LOGICAL_MONITOR_CONF ")a{sv})"
+
+#define APPLY_MONITOR_CONFIG_METHOD_VERIFY 0
+#define APPLY_MONITOR_CONFIG_METHOD_TEMPORARY 1
+#define APPLY_MONITOR_CONFIG_METHOD_PERSISTENT 2
 
 typedef std::unordered_map<std::string, GVariant *> propsmap;
 
@@ -164,14 +170,18 @@ struct DisplayConfig {
 // ---
 // Functions
 
-//Updates the `DisplayState` passed into the function by calling `getCurrentState`
-void           update_display_state       (DisplayState &displayState);
-void           construct_monitors         (GVariantIter *monitors,
-                                           DisplayState &displayState);
-void           construct_modes            (GVariantIter *modes,
-                                           Monitor      &monitor);
-void           construct_logical_monitors (GVariantIter *logicalMonitors,
-                                           DisplayState &displayState);
-					
-propsmap       construct_propsmap         (GVariantIter *props);
+//Updates the `DisplayState` passed into the function by calling `getCurrentState` in dBus
+void       update_display_state       (DisplayState &displayState);
+void       construct_monitors         (GVariantIter *monitors,
+                                       DisplayState &displayState);
+void       construct_modes            (GVariantIter *modes,
+                                       Monitor      &monitor);
+void       construct_logical_monitors (GVariantIter *logicalMonitors,
+                                       DisplayState &displayState);
+propsmap   construct_propsmap         (GVariantIter *props);
+
+//Applies a given `DisplayState` using `applyMonitorsConfig` in dBus
+GVariant * apply_display_state        (const DisplayState &displayState);
+GVariant * config_logical_monitors    (const DisplayState &displayState);
+GVariant * config_monitors_conf       (const DisplayState &displayState);
 #endif
