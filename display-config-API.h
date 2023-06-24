@@ -120,10 +120,12 @@ struct Monitor {
 };
 
 struct DisplayState {
-	int                         serial;
-	std::vector<Monitor>        monitors;
-	std::vector<LogicalMonitor> logicalMonitors;
-	propsmap                    props;
+	int                                      serial;
+	std::vector<Monitor>                     monitors;
+	std::vector<LogicalMonitor>              logicalMonitors;
+	propsmap                                 props;
+
+	std::unordered_map<std::string, Monitor> monitorsHash;
 
 	DisplayState()
 		: serial(0), monitors(), logicalMonitors(), props()
@@ -171,17 +173,18 @@ struct DisplayConfig {
 // Functions
 
 //Updates the `DisplayState` passed into the function by calling `getCurrentState` in dBus
-void       update_display_state       (DisplayState &displayState);
-void       construct_monitors         (GVariantIter *monitors,
-                                       DisplayState &displayState);
-void       construct_modes            (GVariantIter *modes,
-                                       Monitor      &monitor);
-void       construct_logical_monitors (GVariantIter *logicalMonitors,
-                                       DisplayState &displayState);
-propsmap   construct_propsmap         (GVariantIter *props);
+void       update_display_state       (DisplayState         &displayState);
+void       construct_monitors         (GVariantIter         *monitors,
+                                       DisplayState         &displayState);
+void       construct_modes            (GVariantIter         *modes,
+                                       Monitor              &monitor);
+void       construct_logical_monitors (GVariantIter         *logicalMonitors,
+                                       DisplayState         &displayState);
+propsmap   construct_propsmap         (GVariantIter         *props);
 
 //Applies a given `DisplayState` using `applyMonitorsConfig` in dBus
-GVariant * apply_display_state        (const DisplayState &displayState);
-GVariant * config_logical_monitors    (const DisplayState &displayState);
-GVariant * config_monitors_conf       (const DisplayState &displayState);
+void       apply_display_state        (const DisplayState   &displayState);
+GVariant * config_logical_monitors    (const DisplayState   &displayState);
+GVariant * config_monitors_conf       (const DisplayState   &displayState, 
+                                       const LogicalMonitor &logicalMonitor);
 #endif

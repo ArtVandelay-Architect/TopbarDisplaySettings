@@ -96,6 +96,7 @@ construct_monitors (GVariantIter *monitors,
 		monitor.props = construct_propsmap (props);
 
 		displayState.monitors.push_back (monitor);
+		displayState.monitorsHash[monitor.connector] = monitor;
 
 		g_variant_unref (monitorPtr);
 	}
@@ -189,7 +190,9 @@ construct_logical_monitors (GVariantIter *logicalMonitors,
 			monitorSpec.connector = std::string (connector);
 			monitorSpec.vendor = std::string (vendor);
 			monitorSpec.product = std::string (product);
-			monitorSpec.serial = std::string (serial);
+			monitorSpec.serial = std::string (serial); 
+ 
+ 
 			logicalMonitor.monitors.push_back(monitorSpec);
 
 			g_variant_unref (monitorSpecPtr);
@@ -215,7 +218,7 @@ construct_propsmap (GVariantIter *props)
 	return newPropsmap;
 }
 
-GVariant * 
+void 
 apply_display_state (const DisplayState &displayState)
 {
 	GVariant * logicalMonitorParameters = config_logical_monitors(displayState);
@@ -233,21 +236,129 @@ apply_display_state (const DisplayState &displayState)
 	}
 	GVariant * propsParameters = g_variant_builder_end (&propsBuilder);
 
+	//Try to Verify first
 	GVariant * displayParametersVerify = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
 	                                                    displayState.serial,
 	                                                    APPLY_MONITOR_CONFIG_METHOD_VERIFY,
-							    NULL);
-	return nullptr;
+	                                                    logicalMonitorParameters,
+	                                                    propsParameters);
+	GVariant * result = NULL;
+	GError *error;
+	result = g_dbus_connection_call_sync (mainDbusConnection,
+	                                      "org.gnome.Mutter.DisplayConfig",
+	                                      "/org/gnome/Mutter/DisplayConfig",
+	                                      "org.gnome.Mutter.DisplayConfig",
+	                                      "ApplyMonitorsConfig",
+	                                      displayParametersVerify,
+	                                      NULL,
+	                                      G_DBUS_CALL_FLAGS_NO_AUTO_START,
+	                                      -1,
+	                                      NULL,
+	                                      &error);
+
+	if (result == NULL) {
+		g_warning ("Verify ApplyMonitorsConfig parameters failed: %s", error->message);
+	} else { //Verification successful
+		GVariant * displayParametersPerma = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
+	                                                           displayState.serial,
+	                                                           APPLY_MONITOR_CONFIG_METHOD_PERSISTENT,
+	                                                           logicalMonitorParameters,
+	                                                           propsParameters);
+		result = g_dbus_connection_call_sync (mainDbusConnection,
+		                                      "org.gnome.Mutter.DisplayConfig",
+		                                      "/org/gnome/Mutter/DisplayConfig",
+		                                      "org.gnome.Mutter.DisplayConfig",
+		                                      "ApplyMonitorsConfig",
+		                                      displayParametersPerma,
+		                                      NULL,
+		                                      G_DBUS_CALL_FLAGS_NO_AUTO_START,
+		                                      -1,
+		                                      NULL,
+		                                      &error);
+		g_variant_unref (displayParametersPerma);
+	}
+
+
+	g_variant_unref (logicalMonitorParameters);
+	g_variant_unref (propsParameters);
+	g_variant_unref (displayParametersVerify);
 }
 
 GVariant * 
 config_logical_monitors (const DisplayState &displayState)
 {
-	return nullptr;
+	GVariantBuilder builder;
+	g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(" LOGICAL_MONITOR_CONF ")"));
+
+	for (const auto& logicalMonitor : displayState.logicalMonitors) {
+		g_variant_builder_add (&builder,
+		                       LOGICAL_MONITOR_CONF,
+				       logicalMonitor.x,
+				       logicalMonitor.y,
+				       logicalMonitor.scale,
+				       logicalMonitor.transform,
+				       logicalMonitor.primary,
+				       config_monitors_conf (displayState, logicalMonitor));
+	}
+	return g_variant_builder_end (&builder);
 }
 
 GVariant * 
-config_monitors_conf (const DisplayState &displayState)
+config_monitors_conf (const DisplayState   &displayState, 
+                      const LogicalMonitor &logicalMonitor)
 {
-	return nullptr;
+	GVariantBuilder builder;
+	g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(" MONITOR_CONF ")"));
+
+	for (const auto & monitorSpec : logicalMonitor.monitors) {
+		std::string sConnector = monitorSpec.connector;
+		// Mode
+		std::string currentModeID = "", preferredModeID = "", modeID;
+		for (const auto& mode : displayState.monitorsHash.at(sConnector).modes) {
+			if (mode.props.count ("is-current") > 0) {
+				if (g_variant_get_boolean(mode.props.at ("is-current"))) {
+					currentModeID = mode.id;
+					break;
+				}
+			}
+			if (mode.props.count ("is-preferred") > 0) {
+				if (g_variant_get_boolean(mode.props.at ("is-preferred")))
+					preferredModeID = mode.id;
+			}
+		}
+		if (currentModeID != "") { // Current mode exists
+			modeID = currentModeID;
+		}else {
+			if (preferredModeID != "") { // Preferred mode exists
+				modeID = preferredModeID;
+			} else {
+				// At least some mode exists?
+				if (displayState.monitorsHash.at(sConnector).modes.size() != 0)
+					modeID = displayState.monitorsHash.at(sConnector).modes.at(0).id;
+				else
+					g_warning ("No mode found for connector %s", sConnector);
+			}
+				
+		}
+		// Props
+		GVariantBuilder propsBuilder;
+		g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
+		bool ens = false; //enable underscanning
+		std::string key("enable_underscanning");
+		if (displayState.props.count(key) > 0) 
+			ens = g_variant_get_boolean (displayState.props.at(key));
+			g_variant_builder_add (&propsBuilder, 
+			                       "{sv}", 
+					       "enable_underscanning", 
+					       g_variant_new_boolean (ens));
+
+		const gchar *gConnector = sConnector.c_str();
+		g_variant_builder_add (&builder,
+		                       MONITOR_CONF,
+				       gConnector,
+				       modeID,
+				       g_variant_builder_end (&propsBuilder));
+	}
+
+	return g_variant_builder_end (&builder);
 }
