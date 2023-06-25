@@ -27,3 +27,7 @@ install:
 # Builder uses this target to run your application.
 run:
 	./TopbarDisplaySettings
+	
+debug: DEBUG += -g
+debug: OPTIMIZE = -O0
+debug: clean TopbarDisplaySettings

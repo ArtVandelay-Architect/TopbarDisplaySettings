@@ -53,8 +53,12 @@ APPLY_MONITOR_CONFIG_PARAMETER: (uua(iiduba(ssa{sv}))a{sv})
 
 //Formats associated with `applyMonitorsConfig`
 #define MONITOR_CONF "ssa{sv}"
+#define MONITOR_CONF_AT "(ss@a{sv})"
+
 #define LOGICAL_MONITOR_CONF "iiduba(" MONITOR_CONF ")"
-#define APPLY_MONITOR_CONFIG_PARAMETER "(uua(" LOGICAL_MONITOR_CONF ")a{sv})"
+#define LOGICAL_MONITOR_CONF_AT "(iidub@a(" MONITOR_CONF "))"
+
+#define APPLY_MONITOR_CONFIG_PARAMETER "(uu@a(" LOGICAL_MONITOR_CONF ")@a{sv})"
 
 #define APPLY_MONITOR_CONFIG_METHOD_VERIFY 0
 #define APPLY_MONITOR_CONFIG_METHOD_TEMPORARY 1
@@ -128,7 +132,7 @@ struct DisplayState {
 	std::unordered_map<std::string, Monitor> monitorsHash;
 
 	DisplayState()
-		: serial(0), monitors(), logicalMonitors(), props()
+		: serial(0), monitors(), logicalMonitors(), props(), monitorsHash()
 	{}
 };
 
@@ -187,4 +191,7 @@ void       apply_display_state        (const DisplayState   &displayState);
 GVariant * config_logical_monitors    (const DisplayState   &displayState);
 GVariant * config_monitors_conf       (const DisplayState   &displayState, 
                                        const LogicalMonitor &logicalMonitor);
+
+void       clean_propsmaps            (DisplayState         &displayState);
+void       clean_propsmap             (propsmap             &newPropsmap);
 #endif

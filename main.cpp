@@ -40,14 +40,63 @@ main ()
 		g_printerr("Unable to connect to the D-Bus session bus: %s\n", 
 		           error->message);
 		g_error_free(error);
+		g_object_unref (mainDbusConnection);
 		return 1;
 	}
 
 	std::cout << "Getting State...\n";
 	DisplayState displayState;
 	update_display_state(displayState);
+	std::cout << "State updated!\n\n";
 
-	std::cout << displayState.logicalMonitors[0].monitors[0].connector << "<<<<\n";
+	std::cout << "Applying State....\n";
+	//apply_display_state (displayState);
+	std::cout << g_variant_get_uint32 (displayState.props["layout-mode"]) << "<<<\n";
+	clean_propsmaps (displayState);
+
 	
+	g_dbus_connection_close_sync (mainDbusConnection, NULL, &error);
+	if (error != NULL) {
+		g_printerr("Unable to close to the D-Bus session bus: %s\n", 
+		           error->message);
+		g_error_free(error);
+		g_object_unref (mainDbusConnection);
+		return 1;
+	}
+	g_object_unref (mainDbusConnection);
+
+
 	return 0;
 }
+
+/*
+
+*/
+
+/*
+int notmain ()
+{
+	GVariantBuilder builder;
+	GVariant *value;
+	g_variant_builder_init (&builder, G_VARIANT_TYPE ("as"));
+
+	g_variant_builder_add (&builder, "s", "when");
+	g_variant_builder_add (&builder, "s", "in");
+	g_variant_builder_add (&builder, "s", "the");
+	g_variant_builder_add (&builder, "s", "course");
+	value = g_variant_builder_end(&builder);
+
+	GVariantIter *iter;
+	gchar *str;
+
+	g_variant_get (value, "as", &iter);
+	while (g_variant_iter_next (iter, "s", &str)) {
+		g_print ("Value: %s\n", str);
+		//free (gstr);
+	}
+	g_variant_unref (value);
+	g_variant_iter_free (iter);
+	
+}
+
+*/

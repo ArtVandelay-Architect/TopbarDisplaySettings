@@ -65,6 +65,11 @@ update_display_state (DisplayState &displayState)
 	std::cout << "Constructing props\n";
 	displayState.props = construct_propsmap (props);
 
+	g_variant_iter_free (monitors);
+	g_variant_iter_free (logicalMonitors);
+	g_variant_iter_free (props);
+	g_variant_unref (state);
+
 	std::cout << "State constructed!\n";
 }
 
@@ -99,9 +104,14 @@ construct_monitors (GVariantIter *monitors,
 		displayState.monitorsHash[monitor.connector] = monitor;
 
 		g_variant_unref (monitorPtr);
+		g_variant_iter_free (modes);
+		g_variant_iter_free (props);
+		free (connector);
+		free (vendor);
+		free (product);
+		free (serial);
 	}
-	g_variant_iter_free (modes);
-	g_variant_iter_free (props);
+
 }
 
 void
@@ -145,10 +155,12 @@ construct_modes (GVariantIter *modes,
 		monitor.modes.push_back(mode);
 
 		g_variant_unref (modePtr);
-	}
-	g_variant_iter_free (supportedScales);
-	g_variant_iter_free (props);
+		g_variant_iter_free (supportedScales);
+		g_variant_iter_free (props);
+		free (id);
+	}	
 }
+	
 
 void
 construct_logical_monitors (GVariantIter *logicalMonitors,
@@ -196,23 +208,29 @@ construct_logical_monitors (GVariantIter *logicalMonitors,
 			logicalMonitor.monitors.push_back(monitorSpec);
 
 			g_variant_unref (monitorSpecPtr);
+			free (connector);
+			free (vendor);
+			free (product);
+			free (serial);
 		}
 		displayState.logicalMonitors.push_back(logicalMonitor);	
+
+		g_variant_iter_free (monitorSpecs);
 		g_variant_unref (logicalMonitorPtr);	
 	}
-	g_variant_iter_free (monitorSpecs);
+	
 }
 
 propsmap 
 construct_propsmap (GVariantIter *props) 
 {
 	propsmap newPropsmap;
-	const char *cstr;
+	gchar *cstr;
 	GVariant *var = NULL;
 	while (g_variant_iter_next (props, "{&sv}", &cstr, &var)) {
 		std::string cppstr(cstr);
-		newPropsmap[cppstr] = var;
-
+		newPropsmap[cppstr] = g_variant_ref(var);
+		free (cstr);
 		g_variant_unref(var);
 	}
 	return newPropsmap;
@@ -221,9 +239,11 @@ construct_propsmap (GVariantIter *props)
 void 
 apply_display_state (const DisplayState &displayState)
 {
+	std::cout << "Configuring Logical Monitors\n";
 	GVariant * logicalMonitorParameters = config_logical_monitors(displayState);
 
 	//Config props
+	std::cout << "Configuring props\n";
 	GVariantBuilder propsBuilder;
 	g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
 	bool sclm = false; //supports changing layout mode
@@ -237,13 +257,21 @@ apply_display_state (const DisplayState &displayState)
 	GVariant * propsParameters = g_variant_builder_end (&propsBuilder);
 
 	//Try to Verify first
+	std::cout << "Verifying parameters\n";
 	GVariant * displayParametersVerify = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
 	                                                    displayState.serial,
 	                                                    APPLY_MONITOR_CONFIG_METHOD_VERIFY,
 	                                                    logicalMonitorParameters,
 	                                                    propsParameters);
+	std::cout << "Constructing Perma\n";
+	GVariant * displayParametersPerma = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
+			                                   displayState.serial,
+			                                   APPLY_MONITOR_CONFIG_METHOD_PERSISTENT,
+			                                   logicalMonitorParameters,
+			                                   propsParameters);
+
 	GVariant * result = NULL;
-	GError *error;
+	GError *error = NULL;
 	result = g_dbus_connection_call_sync (mainDbusConnection,
 	                                      "org.gnome.Mutter.DisplayConfig",
 	                                      "/org/gnome/Mutter/DisplayConfig",
@@ -256,14 +284,11 @@ apply_display_state (const DisplayState &displayState)
 	                                      NULL,
 	                                      &error);
 
-	if (result == NULL) {
-		g_warning ("Verify ApplyMonitorsConfig parameters failed: %s", error->message);
+
+	if (error != NULL || result == NULL) {
+		g_warning ("Verify ApplyMonitorsConfig parameters failed: %d %s\n", error->code, error->message);
 	} else { //Verification successful
-		GVariant * displayParametersPerma = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
-	                                                           displayState.serial,
-	                                                           APPLY_MONITOR_CONFIG_METHOD_PERSISTENT,
-	                                                           logicalMonitorParameters,
-	                                                           propsParameters);
+		std::cout << "Verification successful\n";						   
 		result = g_dbus_connection_call_sync (mainDbusConnection,
 		                                      "org.gnome.Mutter.DisplayConfig",
 		                                      "/org/gnome/Mutter/DisplayConfig",
@@ -275,13 +300,14 @@ apply_display_state (const DisplayState &displayState)
 		                                      -1,
 		                                      NULL,
 		                                      &error);
-		g_variant_unref (displayParametersPerma);
+		std::cout << "sync called\n";
+		//g_variant_unref (displayParametersPerma);
 	}
 
 
-	g_variant_unref (logicalMonitorParameters);
-	g_variant_unref (propsParameters);
-	g_variant_unref (displayParametersVerify);
+	//g_variant_unref (logicalMonitorParameters);
+	//g_variant_unref (propsParameters);
+	//g_variant_unref (displayParametersVerify);
 }
 
 GVariant * 
@@ -292,7 +318,7 @@ config_logical_monitors (const DisplayState &displayState)
 
 	for (const auto& logicalMonitor : displayState.logicalMonitors) {
 		g_variant_builder_add (&builder,
-		                       LOGICAL_MONITOR_CONF,
+		                       LOGICAL_MONITOR_CONF_AT,
 				       logicalMonitor.x,
 				       logicalMonitor.y,
 				       logicalMonitor.scale,
@@ -303,16 +329,20 @@ config_logical_monitors (const DisplayState &displayState)
 	return g_variant_builder_end (&builder);
 }
 
+
 GVariant * 
 config_monitors_conf (const DisplayState   &displayState, 
                       const LogicalMonitor &logicalMonitor)
 {
+	std::cout << "Configuring monitors conf\n";
 	GVariantBuilder builder;
 	g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(" MONITOR_CONF ")"));
 
 	for (const auto & monitorSpec : logicalMonitor.monitors) {
 		std::string sConnector = monitorSpec.connector;
+
 		// Mode
+		std::cout << "Configuring modes\n";
 		std::string currentModeID = "", preferredModeID = "", modeID;
 		for (const auto& mode : displayState.monitorsHash.at(sConnector).modes) {
 			if (mode.props.count ("is-current") > 0) {
@@ -336,29 +366,67 @@ config_monitors_conf (const DisplayState   &displayState,
 				if (displayState.monitorsHash.at(sConnector).modes.size() != 0)
 					modeID = displayState.monitorsHash.at(sConnector).modes.at(0).id;
 				else
-					g_warning ("No mode found for connector %s", sConnector);
+					g_warning ("No mode found for connector %s\n", sConnector.c_str());
 			}
 				
 		}
+
 		// Props
+		std::cout << "Configuring monitors conf props\n";
 		GVariantBuilder propsBuilder;
 		g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
 		bool ens = false; //enable underscanning
 		std::string key("enable_underscanning");
-		if (displayState.props.count(key) > 0) 
+		if (displayState.props.count(key) > 0) {
 			ens = g_variant_get_boolean (displayState.props.at(key));
 			g_variant_builder_add (&propsBuilder, 
 			                       "{sv}", 
 					       "enable_underscanning", 
 					       g_variant_new_boolean (ens));
+		} else {
+			std::cout << "No underscanning, adding place holder\n";
+			g_variant_builder_add (&propsBuilder, 
+			                       "{sv}", 
+					       "enable_underscanning", 
+					       g_variant_new_boolean (false));			
+		}
 
 		const gchar *gConnector = sConnector.c_str();
+		const gchar *gModeID = modeID.c_str();
+		printf ("pp %s\n", gModeID);
+		std::cout << "(" MONITOR_CONF ")" << "Assembling monitors conf\n";
 		g_variant_builder_add (&builder,
-		                       MONITOR_CONF,
+		                       MONITOR_CONF_AT,
 				       gConnector,
-				       modeID,
+				       gModeID,
 				       g_variant_builder_end (&propsBuilder));
-	}
 
-	return g_variant_builder_end (&builder);
+		
+		std::cout << "Finished assembling monitors conf\n";
+		//g_variant_unref (propsParameters);
+	}
+	std::cout << "Monitors conf: ready to return\n";
+	GVariant *res = g_variant_builder_end (&builder);
+	return res;
+}
+
+void
+clean_propsmaps (DisplayState &displayState)
+{
+	clean_propsmap (displayState.props);
+	for (auto& monitor : displayState.monitors) {
+		clean_propsmap (monitor.props);
+		for (auto& mode : monitor.modes) {
+			clean_propsmap (mode.props);
+		}
+	}
+}
+
+
+void
+clean_propsmap (propsmap &newPropsmap)
+{
+	for (const auto& kv : newPropsmap) { //Key : Value
+		g_variant_unref(kv.second);
+	}
 }
