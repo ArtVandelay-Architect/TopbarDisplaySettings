@@ -55,6 +55,7 @@ update_display_state (DisplayState &displayState)
 		       &monitors,
 		       &logicalMonitors,
 		       &props);
+	
 
 	std::cout << "Constructing serial\n";
 	displayState.serial = (int) serial;
@@ -64,7 +65,7 @@ update_display_state (DisplayState &displayState)
 	construct_logical_monitors (logicalMonitors, displayState);	
 	std::cout << "Constructing props\n";
 	displayState.props = construct_propsmap (props);
-
+	
 	g_variant_iter_free (monitors);
 	g_variant_iter_free (logicalMonitors);
 	g_variant_iter_free (props);
@@ -230,7 +231,7 @@ construct_propsmap (GVariantIter *props)
 	while (g_variant_iter_next (props, "{&sv}", &cstr, &var)) {
 		std::string cppstr(cstr);
 		newPropsmap[cppstr] = g_variant_ref(var);
-		free (cstr);
+		//free (cstr);
 		g_variant_unref(var);
 	}
 	return newPropsmap;
@@ -283,7 +284,8 @@ apply_display_state (const DisplayState &displayState)
 	                                      -1,
 	                                      NULL,
 	                                      &error);
-
+	g_error_free (error);
+	g_variant_unref (result);
 
 	if (error != NULL || result == NULL) {
 		g_warning ("Verify ApplyMonitorsConfig parameters failed: %d %s\n", error->code, error->message);
@@ -299,12 +301,12 @@ apply_display_state (const DisplayState &displayState)
 		                                      G_DBUS_CALL_FLAGS_NO_AUTO_START,
 		                                      -1,
 		                                      NULL,
-		                                      &error);
+		                                      NULL);
 		std::cout << "sync called\n";
 		//g_variant_unref (displayParametersPerma);
 	}
 
-
+	g_variant_unref (result);
 	//g_variant_unref (logicalMonitorParameters);
 	//g_variant_unref (propsParameters);
 	//g_variant_unref (displayParametersVerify);

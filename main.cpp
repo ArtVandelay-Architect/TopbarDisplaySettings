@@ -24,6 +24,8 @@
 #include "display-config-API.h"
 #include <gio/gio.h>
 #include <glib.h>
+#include "timingFunctions.h"
+
 
 GDBusConnection *mainDbusConnection;
 
@@ -46,14 +48,21 @@ main ()
 
 	std::cout << "Getting State...\n";
 	DisplayState displayState;
-	update_display_state(displayState);
+	update_display_state (displayState);
 	std::cout << "State updated!\n\n";
 
-	std::cout << "Applying State....\n";
-	//apply_display_state (displayState);
-	std::cout << g_variant_get_uint32 (displayState.props["layout-mode"]) << "<<<\n";
-	clean_propsmaps (displayState);
+	for (auto& logicalMonitor : displayState.logicalMonitors) {
+		std::cout << "Scale: " << logicalMonitor.scale << "\n";
+		logicalMonitor.scale = logicalMonitor.scale * 2;
+	}
 
+goodclock start = get_start_time ();
+	std::cout << "Applying State....\n";
+	apply_display_state (displayState);
+save_time_to_csv (start, "apply");
+
+
+	clean_propsmaps (displayState);
 	
 	g_dbus_connection_close_sync (mainDbusConnection, NULL, &error);
 	if (error != NULL) {

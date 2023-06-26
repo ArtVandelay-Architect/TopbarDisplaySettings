@@ -1,6 +1,3 @@
-all: TopbarDisplaySettings
-
-
 WARNINGS = -Wall -Weffc++ -Wextra -Wsign-conversion -pedantic-errors
 DEBUG = -ggdb -fno-omit-frame-pointer
 OPTIMIZE = -O2
@@ -8,26 +5,28 @@ STANDARD = -std=c++2a
 LIBS = `pkg-config --libs gio-2.0`
 INCLUDES = `pkg-config --cflags gio-2.0`
 
-SOURCES = main.cpp display-config-API.cpp
+SOURCES = main.cpp display-config-API.cpp timingFunctions.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
-TopbarDisplaySettings: $(OBJECTS)
-	$(CXX) $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(STANDARD) $(OBJECTS) $(LIBS)  -o $@ 
+TARGET = TopbarDisplaySettings
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CXX) $(WARNINGS) $(OPTIMIZE) $(STANDARD) $(OBJECTS) $(LIBS) -o $@
 
 %.o: %.cpp
-	$(CXX) $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(STANDARD) $(INCLUDES) -c $< -o $@
+	$(CXX) $(WARNINGS) $(OPTIMIZE) $(STANDARD) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f TopbarDisplaySettings $(OBJECTS)
+	rm -f $(TARGET) $(OBJECTS)
 
-# Builder will call this to install the application before running.
 install:
 	echo "Installing is not supported"
 
-# Builder uses this target to run your application.
 run:
-	./TopbarDisplaySettings
-	
-debug: DEBUG += -g
+	./$(TARGET)
+
+debug: CXXFLAGS += $(DEBUG)
 debug: OPTIMIZE = -O0
-debug: clean TopbarDisplaySettings
+debug: clean $(TARGET)
