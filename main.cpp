@@ -18,20 +18,28 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "display-config-API.h"
+#include "timingFunctions.h"
+#include "menu-config.h"
+
 #include <iostream>
 #include <cstdlib>
-#include <vector>
-#include "display-config-API.h"
-#include <gio/gio.h>
-#include <glib.h>
-#include "timingFunctions.h"
 
 
 GDBusConnection *mainDbusConnection;
 
 
+int main(int argc, char *argv[])
+{
+	menu_init ();
+
+
+
+	return 0;
+}
+/*
 int
-main ()
+alsonotmain ()
 {
 	std::cout << "Getting Bus...\n";
 	GError *error = NULL;
@@ -77,7 +85,7 @@ save_time_to_csv (start, "apply");
 
 	return 0;
 }
-
+*/
 /*
 
 */

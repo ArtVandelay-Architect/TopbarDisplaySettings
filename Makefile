@@ -2,10 +2,10 @@ WARNINGS = -Wall -Weffc++ -Wextra -Wsign-conversion -pedantic-errors
 DEBUG = -ggdb -fno-omit-frame-pointer
 OPTIMIZE = -O2
 STANDARD = -std=c++2a
-LIBS = `pkg-config --libs gio-2.0`
-INCLUDES = `pkg-config --cflags gio-2.0`
+LIBS = `pkg-config --libs gio-2.0 gtk+-3.0 appindicator3-0.1`
+INCLUDES = `pkg-config --cflags gio-2.0 gtk+-3.0 appindicator3-0.1`
 
-SOURCES = main.cpp display-config-API.cpp timingFunctions.cpp
+SOURCES = main.cpp display-config-API.cpp timingFunctions.cpp menu-config.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 TARGET = TopbarDisplaySettings
