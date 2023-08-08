@@ -36,9 +36,7 @@
                 "/usr/include/libmount",
                 "/usr/include/blkid",
                 "/usr/include/glib-2.0",
-                "/usr/lib/x86_64-linux-gnu/glib-2.0/include",
-                "/usr/include/libappindicator3-0.1",
-                "/usr/include/libdbusmenu-glib-0.4"
+                "/usr/lib/x86_64-linux-gnu/glib-2.0/include"
             ],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c11",

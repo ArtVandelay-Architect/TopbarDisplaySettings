@@ -2,10 +2,13 @@ WARNINGS = -Wall -Weffc++ -Wextra -Wsign-conversion -pedantic-errors
 DEBUG = -ggdb -fno-omit-frame-pointer
 OPTIMIZE = -O2
 STANDARD = -std=c++2a
-LIBS = `pkg-config --libs gio-2.0 gtk+-3.0 appindicator3-0.1`
-INCLUDES = `pkg-config --cflags gio-2.0 gtk+-3.0 appindicator3-0.1`
+LIBS = `pkg-config --libs gio-2.0 gtk+-3.0 ayatana-appindicator3-0.1`
+INCLUDES = `pkg-config --cflags gio-2.0 gtk+-3.0 ayatana-appindicator3-0.1`
 
-SOURCES = main.cpp display-config-API.cpp timingFunctions.cpp menu-config.cpp
+#LIBS = `pkg-config --libs gio-2.0 gtk+-3.0 appindicator3-0.1`
+#INCLUDES = `pkg-config --cflags gio-2.0 gtk+-3.0 appindicator3-0.1`
+
+SOURCES = main.cpp display-config-API.cpp timingFunctions.cpp menu-config.cpp display-settings-wrappers.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 TARGET = TopbarDisplaySettings
@@ -27,6 +30,6 @@ install:
 run:
 	./$(TARGET)
 
-debug: CXXFLAGS += $(DEBUG)
+debug: STANDARD += $(DEBUG)
 debug: OPTIMIZE = -O0
 debug: clean $(TARGET)

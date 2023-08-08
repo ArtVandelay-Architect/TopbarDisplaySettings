@@ -1,4 +1,4 @@
-/* main.cpp
+/* display-settings-wrappers.h
  *
  * Copyright 2023 Luke Li
  *
@@ -18,26 +18,18 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "display-config-API.h"
-#include "timingFunctions.h"
-#include "menu-config.h"
+#ifndef DISPLAY_SETTINGS_WRAPPERS_H
+#define DISPLAY_SETTINGS_WRAPPERS_H
 
-#include <iostream>
-#include <cstdlib>
+// Sets the display scaling to `scale`, will be rounded to nearest 0.25
+void   set_display_scaling          (double scale);
+// Multiply the current scaling by `scale factor`
+void   set_display_scaling_relative (double scaleFactor);
+// Get the display scaling of one of the monitors
+double get_display_scaling          ();
+// Set the visibility of the taskbar
+void   set_taskbar_visibility       (bool visible);
+// Send reset commands to modprobe for wacom `sudo modprobe -r wacom && sudo modprobe wacom`
+void   send_modprobe_reset_commands ();
 
-
-GDBusConnection *mainDbusConnection;
-
-
-int main(int argc, char *argv[])
-{
-	gtk_init(NULL, NULL);
-
-	SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
-
-	systemTrayMenu.status_icon_show ();
-
-	gtk_main();
-
-	return 0;
-}
+#endif
