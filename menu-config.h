@@ -46,8 +46,11 @@ private:
 	GtkWidget      *taskSW;         //GtkSwitch
 	GtkWidget      *closeBtn;       //GtkButton
 
-	double          scaleValue;     //Value displayed on scaleDisplayed
-	std::string     scaleValueS;
+	// Value displayed on scaleDisplayed can be values of [1,3] in 0.25 increments
+	// scaleValue is updated when the program is launched, but is then only
+	// ...updated internally, meaning external change will not be reflected
+	double          scaleValue;
+	std::string     scaleValueS;	
 
 public:        
 	SystemTrayMenu                              (std::string           newStatusIconPath, //path of a image file
@@ -66,6 +69,11 @@ public:
 	void            status_icon_show            ();
 	void            status_icon_hide            ();
 
+	// Refresh the scaleDisplayed label, usually used after a change of scaleValueS
+	void            refresh_scale_displayed     ();
+	// Reset the position of the popup window, usually after a change of display scale
+	void            construct_window                ();
+
 	// Call back functions (wrapped by public functions for proper g_signal_connect)
 	// ...and their helpers
 	void            status_icon_activated       ();
@@ -80,7 +88,6 @@ public:
 	void            reset_btn_clicked           ();
            
 	void            close_btn_clicked           ();
-	
 };
 
 // Call back functions with namespace stm_

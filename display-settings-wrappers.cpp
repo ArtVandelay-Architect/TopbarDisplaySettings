@@ -21,18 +21,51 @@
 #include "display-config-API.h"
 #include "display-settings-wrappers.h"
 #include <iostream>
+#include <sstream>
+#include <cstdlib>
+#include <cmath>
 
-void set_display_scaling (double scale) 
+bool isWholeNumber (double num, 
+                    double epsilon = 1e-10) 
 {
+	double fractionalPart = std::fabs(num - std::round(num));
+	return fractionalPart < epsilon;
+}
+
+double set_display_scaling (double scale) 
+{
+	// Approximate the scale to nearest 0.25
+	bool scaleSet = false;
+	for (double s = 1; s <= 3.1; s+=0.25){
+		double absDiff = (scale > s) ? (scale - s) : (s - scale);
+		if (absDiff < 0.25) {
+			scale = s;
+			scaleSet = true;
+			break;
+		}
+	}
+	if (!scaleSet) {
+		std::cout << "Invalid scale!\n";
+		scale = 1;
+	}
+
+	if (isWholeNumber (scale)) {
+		set_fractional_scaling (false);
+	} else {
+		set_fractional_scaling (true);
+	}
+
 	DisplayState displayState;
 	update_display_state (displayState);
 	for (auto& logicalMonitor : displayState.logicalMonitors) {
 		logicalMonitor.scale = scale;
 	}
+
 	apply_display_state (displayState);
+	return scale;
 }
 
-void set_display_scaling_relative (double scaleFactor)
+double set_display_scaling_relative (double scaleFactor) //Buggy!
 {
 	DisplayState displayState;
 	update_display_state (displayState);
@@ -40,6 +73,7 @@ void set_display_scaling_relative (double scaleFactor)
 		logicalMonitor.scale *= scaleFactor;
 	}
 	apply_display_state (displayState);
+	return scaleFactor;
 }
 
 double get_display_scaling ()
@@ -73,5 +107,148 @@ void send_modprobe_reset_commands ()
 	err = system ("sudo modprobe wacom");
 	if (err) {
 		std::cout << "Error executing command in send_modprobe_reset_commands\n";
+	}
+}
+
+bool get_fractional_scaling ()
+{
+	// Get all the enabled experimental features
+	const char * command = "gsettings get org.gnome.mutter experimental-features";
+	FILE* pipe = popen (command, "r");
+	char buffer[128];
+	std::vector<std::string> outputLines;
+	while (fgets (buffer, sizeof (buffer), pipe) != nullptr) {
+		outputLines.emplace_back (buffer);
+	}
+	pclose(pipe);
+	std::string features = outputLines[0]; //Likely only one line
+
+	if (features == "@as []\n") //empty
+		return false;
+	// Otherwise, features will be like ['x11-randr-fractional-scaling', 'aaa']
+	features = features.substr (1, features.length () - 3); //Remove brackets
+
+	// Split the string based on commas
+	std::istringstream ss (features);
+	std::string token;
+	
+	while (std::getline (ss, token, ',')) {
+		if (token == "'x11-randr-fractional-scaling'")
+			return true;
+	}
+	
+	return false;
+}
+
+void set_fractional_scaling (bool mode)
+{
+	// Get all the enabled experimental features
+	const char * command = "gsettings get org.gnome.mutter experimental-features";
+	FILE* pipe = popen (command, "r");
+	char buffer[128];
+	std::vector<std::string> outputLines;
+	while (fgets (buffer, sizeof (buffer), pipe) != nullptr) {
+		outputLines.emplace_back (buffer);
+	}
+	pclose(pipe);
+	std::string features = outputLines[0]; //Likely only one line
+
+	std::string mainCommand = "gsettings set org.gnome.mutter experimental-features \"";
+	std::cout << "Features: " << features << " " << (features == "@as []") << "\n";
+	if (features == "@as []\n") { //No current features
+		if (mode) {
+			mainCommand = mainCommand + "['x11-randr-fractional-scaling']";
+		} else { //Already false, no need to set
+			return;
+		}
+	} else { //features like ['x11-randr-fractional-scaling', 'aaa']
+		features = features.substr (1, features.length () - 3); //Remove brackets
+		// Split the string based on commas
+		std::istringstream ss (features);
+		std::string token;
+		std::vector<std::string> elements;
+		
+		while (std::getline (ss, token, ',')) {
+			if (token == "'x11-randr-fractional-scaling'") {//Already exists
+				if (mode) {
+					return;
+				}
+				continue;
+			}
+			elements.push_back (token);
+		}
+		if (mode) { //Does not exist, need to be added
+			elements.push_back ("'x11-randr-fractional-scaling'");
+		}
+
+		if (elements.size() > 0) { //If there are any features to be added
+			std::string key = "[";
+			for (const auto& e : elements) {
+				key = key + e + ",";
+			}
+			key = key.substr (0, key.length () - 1); //Remove final comma
+			mainCommand = mainCommand + key + "]";
+		} else { //Otherwise, add a square bracket
+			mainCommand = mainCommand + "[]";
+		}
+	}
+	mainCommand = mainCommand + "\"";
+	std::cout << "set_fractional_scaling: Engaging command: " << mainCommand << "\n";
+	int err = system (mainCommand.c_str());
+	if (err) {
+		std::cout << "Set fractional scaling failed\n";
+	}
+		
+}
+
+void update_supported_scales ()
+{
+	DisplayState displayState;
+	update_display_state (displayState);
+
+	// Only consider the first monitor for now
+	const auto monitor = displayState.monitors[0];
+
+	// There does not exist a straight-forward way to find modes
+	// We must guess
+	Mode currMode;
+	bool currentModeFound = false, preferredModeFound = false;
+	for (const auto& mode : monitor.modes) {
+		// If they are nice enough to include properties, great
+		if (mode.props.count ("is-current") > 0) { //is-current should be priotised
+			if (g_variant_get_boolean(mode.props.at ("is-current"))) {
+				currentModeFound = true;
+				currMode = mode;
+				break;
+			}
+		}
+		if (mode.props.count ("is-preferred") > 0) { //is-preferred will do
+			if (g_variant_get_boolean(mode.props.at ("is-preferred")))
+				preferredModeFound = true;
+				currMode = mode;
+		}
+	}
+	if ((!currentModeFound) && (!preferredModeFound)) {
+		if (monitor.modes.size () > 0) {
+			currMode = monitor.modes.at(0);
+		} else {
+			g_warning ("Cannot find mode in update_supported_scales");
+			return;
+		}
+	}
+	
+	supportedScales.clear ();
+	for (const double scale : currMode.supportedScales) {
+		// The keys are the nearest 25% of scales 
+		int minDiff = 1000, temp;
+		for (int key = 100; key <= 500; key+=25) {
+			temp = static_cast<int> ((key > scale * 100) ? (key - scale * 100) : (scale * 100 - key));
+			if (temp > minDiff) {
+				key -= 25;
+				supportedScales[key] = scale;
+				break;
+			}
+			minDiff = temp;
+		}
 	}
 }

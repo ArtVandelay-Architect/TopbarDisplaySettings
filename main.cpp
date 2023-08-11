@@ -21,6 +21,7 @@
 #include "display-config-API.h"
 #include "timingFunctions.h"
 #include "menu-config.h"
+#include "display-settings-wrappers.h"
 
 #include <iostream>
 #include <cstdlib>
@@ -28,14 +29,45 @@
 
 GDBusConnection *mainDbusConnection;
 
+//1, 1.25, 1.49533
 
 int main(int argc, char *argv[])
 {
-	gtk_init(NULL, NULL);
+	gtk_init(&argc, &argv);
 
-	SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
+	std::cout << "Getting Bus...\n";
+	GError *error = NULL;
+	mainDbusConnection = g_bus_get_sync (G_BUS_TYPE_SESSION, 
+	                                     NULL, 
+				             &error);
+	if (error != NULL) {
+		g_printerr("Unable to connect to the D-Bus session bus: %s\n", 
+		           error->message);
+		g_error_free(error);
+		g_object_unref (mainDbusConnection);
+		return 1;
+	}
 
-	systemTrayMenu.status_icon_show ();
+	//SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
+
+	//systemTrayMenu.status_icon_show ();
+
+	//set_display_scaling (1.5);
+
+	DisplayState displayState;
+
+	update_display_state (displayState);
+	
+	for (const auto& monitor : displayState.monitors) {
+		std::cout << "\nNumber of Modes: " << monitor.modes.size() << "\n";
+		for (const auto& mode : monitor.modes) {
+			std::cout << mode.id <<": Preferred scale: " << mode.preferredScale << "\n";
+			for (const auto& scale : mode.supportedScales) {
+				std::cout << scale << " ";
+			}
+			std::cout << "\n";
+		}
+	}
 
 	gtk_main();
 

@@ -42,41 +42,14 @@ SystemTrayMenu::SystemTrayMenu (std::string   newStatusIconPath,
 	scaleValue (0),
 	scaleValueS ()
 {	
-
-
-
 	// Create a status icon and ignore the fact that it is deprecated
 	// Most "modern" ways of creating a system tray icon ended up using GtkStatusIcon anyways
 	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	statusIcon = gtk_status_icon_new_from_file (statusIconPath.c_str ());
 	G_GNUC_END_IGNORE_DEPRECATIONS
 
-
-
-	// Build the popup window AKA menu
-	GtkBuilder *builder = gtk_builder_new ();
-	gtk_builder_add_from_file (builder, uiPath.c_str (), NULL);
-	window = GTK_WIDGET (gtk_builder_get_object (builder, "popupWindow"));
-	//Grab all the other widget to be programmed
-	mainGrid = GTK_WIDGET(gtk_builder_get_object(builder, "mainGrid"));
-	scaleBox = GTK_WIDGET(gtk_builder_get_object(builder, "scaleBox"));
-	scaleDownBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDownBtn"));
-	scaleDisplayed = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDisplayed"));
-	scaleUpBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleUpBtn"));
-	resetBtn = GTK_WIDGET(gtk_builder_get_object(builder, "resetBtn"));
-	taskSW = GTK_WIDGET(gtk_builder_get_object(builder, "taskSW"));
-	closeBtn = GTK_WIDGET(gtk_builder_get_object(builder, "closeBtn"));
-
-	g_signal_connect (statusIcon, "activate", G_CALLBACK(stm_status_icon_activated), this);
-	g_signal_connect (scaleDownBtn, "clicked", G_CALLBACK(stm_scale_down_btn_clicked), this);
-	g_signal_connect (scaleUpBtn, "clicked", G_CALLBACK(stm_scale_up_btn_clicked), this);
-	g_signal_connect (resetBtn, "clicked", G_CALLBACK(stm_reset_btn_clicked), this);
-	g_signal_connect (closeBtn, "clicked", G_CALLBACK(stm_close_btn_clicked), this);
-
-	scaleValue = get_display_scaling ();
-	scaleValueS = std::to_string (scaleValue);
-	const char * scaleC = scaleValueS.c_str();
-	gtk_label_set_label (GTK_LABEL (scaleDisplayed), scaleC);
+	construct_window ();
+	
 }
 
 SystemTrayMenu::~SystemTrayMenu () 
@@ -85,18 +58,18 @@ SystemTrayMenu::~SystemTrayMenu ()
 }
 
 SystemTrayMenu::SystemTrayMenu (const SystemTrayMenu& other) :
-	statusIconPath(other.get_status_icon_path ()), 
-	statusIcon(nullptr), 
-	uiPath(other.get_ui_path ()), 
-	window(nullptr),
-	mainGrid(nullptr),   
-	scaleBox(nullptr),    
-	scaleDownBtn(nullptr), 
-	scaleDisplayed(nullptr),
-	scaleUpBtn(nullptr),
-	resetBtn(nullptr),   
-	taskSW(nullptr),     
-	closeBtn(nullptr),
+	statusIconPath (other.get_status_icon_path ()), 
+	statusIcon (nullptr), 
+	uiPath (other.get_ui_path ()), 
+	window (nullptr),
+	mainGrid (nullptr),   
+	scaleBox (nullptr),    
+	scaleDownBtn (nullptr), 
+	scaleDisplayed (nullptr),
+	scaleUpBtn (nullptr),
+	resetBtn (nullptr),   
+	taskSW (nullptr),     
+	closeBtn (nullptr),
 	scaleValue (0),
 	scaleValueS ()
 {
@@ -151,6 +124,55 @@ void SystemTrayMenu::status_icon_hide ()
 	G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
+void SystemTrayMenu::refresh_scale_displayed ()
+{
+	scaleValueS = std::to_string (static_cast<int> (scaleValue*100)) + "%";
+	std::cout << "scaleValueS: " << scaleValueS << "\n";
+	const char * scaleC = scaleValueS.c_str();
+	gtk_label_set_label (GTK_LABEL (scaleDisplayed), scaleC);
+
+}
+
+void SystemTrayMenu::construct_window ()
+{
+	if (window != NULL) {
+		gtk_widget_hide (window);
+		gtk_widget_destroy (window);
+		window = NULL;
+	} else {
+		// This rounds the scaling and resets it if needed for first time booting
+		scaleValue = set_display_scaling (get_display_scaling ()); 
+	}
+
+	// Build the popup window AKA menu
+	GtkBuilder *builder = gtk_builder_new ();
+	gtk_builder_add_from_file (builder, uiPath.c_str (), NULL);
+	window = GTK_WIDGET (gtk_builder_get_object (builder, "popupWindow"));
+	//Grab all the other widget to be programmed
+	mainGrid = GTK_WIDGET(gtk_builder_get_object(builder, "mainGrid"));
+	scaleBox = GTK_WIDGET(gtk_builder_get_object(builder, "scaleBox"));
+	scaleDownBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDownBtn"));
+	scaleDisplayed = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDisplayed"));
+	scaleUpBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleUpBtn"));
+	resetBtn = GTK_WIDGET(gtk_builder_get_object(builder, "resetBtn"));
+	taskSW = GTK_WIDGET(gtk_builder_get_object(builder, "taskSW"));
+	closeBtn = GTK_WIDGET(gtk_builder_get_object(builder, "closeBtn"));
+
+	g_signal_connect (statusIcon, "activate", G_CALLBACK(stm_status_icon_activated), this);
+	g_signal_connect (scaleDownBtn, "clicked", G_CALLBACK(stm_scale_down_btn_clicked), this);
+	g_signal_connect (scaleUpBtn, "clicked", G_CALLBACK(stm_scale_up_btn_clicked), this);
+	g_signal_connect (resetBtn, "clicked", G_CALLBACK(stm_reset_btn_clicked), this);
+	g_signal_connect (closeBtn, "clicked", G_CALLBACK(stm_close_btn_clicked), this);
+
+	if (scaleValue == 1)
+		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
+	else if (scaleValue == 3)
+		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
+
+	refresh_scale_displayed ();
+
+}
+
 void SystemTrayMenu::status_icon_activated ()
 {
 	std::cout << "Status icon activated\n";
@@ -160,6 +182,7 @@ void SystemTrayMenu::status_icon_activated ()
 	calculate_window_coordinate (x, y, screen);
 	gtk_window_move (GTK_WINDOW (window), x, y);
 	gtk_widget_show_all (window);
+	gtk_window_move (GTK_WINDOW (window), x, y);
 }
 
 void SystemTrayMenu::calculate_window_coordinate (int        &x,
@@ -183,7 +206,6 @@ void SystemTrayMenu::calculate_window_coordinate (int        &x,
 	// ...in relation to the icon
 	// 0:directly beneath
 	// 1:left adjusted
-	// 2:right adjusted
 	short displayLocation = 1;
 
 	switch (displayLocation) {
@@ -200,18 +222,60 @@ void SystemTrayMenu::calculate_window_coordinate (int        &x,
 			y = 0;
 			std::cout << "Unknown displayLocation in calculate_window_coordinate\n";
 	}
+	std::cout << "x: " << x << " y: " << y << "\n";
 
 	
 }
 
 void SystemTrayMenu::scale_down_btn_clicked()
 {
-	
+	scaleValue -= 0.25;
+	// Exception handling
+	if (scaleValue <= 1) 
+		scaleValue = set_display_scaling (1);
+	else
+		scaleValue = set_display_scaling (scaleValue);
+
+	// If the scales are not on the boundary, enable buttons
+	if (scaleValue < 3) {
+		gtk_widget_set_sensitive (scaleUpBtn, TRUE);
+	} else {
+		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
+	}
+	if (scaleValue > 1) {
+		gtk_widget_set_sensitive (scaleDownBtn, TRUE);
+	} else {
+		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
+	}
+
+	//refresh_scale_displayed ();
+	construct_window ();
 }
 
 void SystemTrayMenu::scale_up_btn_clicked()
 {
+	scaleValue += 0.25;
+	// Exception handling
+	if (scaleValue >= 3) 
+		scaleValue = set_display_scaling (3);
+	else
+		scaleValue = set_display_scaling (scaleValue);
+	//std::cout << "AAAAAAAAAAAAAAAAADisplay setting engaged\n";
 
+	// If the scales are not on the boundary, enable buttons
+	if (scaleValue < 3) {
+		gtk_widget_set_sensitive (scaleUpBtn, TRUE);
+	} else {
+		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
+	}
+	if (scaleValue > 1) {
+		gtk_widget_set_sensitive (scaleDownBtn, TRUE);
+	} else {
+		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
+	}
+
+	//refresh_scale_displayed ();
+	construct_window ();
 }
 
 void SystemTrayMenu::reset_btn_clicked()

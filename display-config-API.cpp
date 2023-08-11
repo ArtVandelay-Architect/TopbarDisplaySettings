@@ -26,7 +26,7 @@
 void 
 update_display_state (DisplayState &displayState) 
 {
-	std::cout << "Calling Dbus\n";
+	//std::cout << "Calling Dbus\n";
 	GVariant *state;
 	state = g_dbus_connection_call_sync (mainDbusConnection,
 	                                     "org.gnome.Mutter.DisplayConfig",
@@ -48,7 +48,7 @@ update_display_state (DisplayState &displayState)
 	GVariantIter *logicalMonitors;
 	GVariantIter *props;
 
-	std::cout << "Dissecting variant\n";
+	//std::cout << "Dissecting variant\n";
 	g_variant_get (state,
 	               CURRENT_STATE_FORMAT,
 		       &serial,
@@ -57,13 +57,13 @@ update_display_state (DisplayState &displayState)
 		       &props);
 	
 
-	std::cout << "Constructing serial\n";
+	//std::cout << "Constructing serial\n";
 	displayState.serial = (int) serial;
-	std::cout << "Constructing monitors\n";
+	//std::cout << "Constructing monitors\n";
 	construct_monitors (monitors, displayState);
-	std::cout << "Constructing logical monitors\n";
+	//std::cout << "Constructing logical monitors\n";
 	construct_logical_monitors (logicalMonitors, displayState);	
-	std::cout << "Constructing props\n";
+	//std::cout << "Constructing props\n";
 	displayState.props = construct_propsmap (props);
 	
 	g_variant_iter_free (monitors);
@@ -71,7 +71,7 @@ update_display_state (DisplayState &displayState)
 	g_variant_iter_free (props);
 	g_variant_unref (state);
 
-	std::cout << "State constructed!\n";
+	//std::cout << "State constructed!\n";
 }
 
 void
@@ -240,11 +240,11 @@ construct_propsmap (GVariantIter *props)
 void 
 apply_display_state (const DisplayState &displayState)
 {
-	std::cout << "Configuring Logical Monitors\n";
+	//std::cout << "Configuring Logical Monitors\n";
 	GVariant * logicalMonitorParameters = config_logical_monitors(displayState);
 
 	//Config props
-	std::cout << "Configuring props\n";
+	//std::cout << "Configuring props\n";
 	GVariantBuilder propsBuilder;
 	g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
 	bool sclm = false; //supports changing layout mode
@@ -258,13 +258,13 @@ apply_display_state (const DisplayState &displayState)
 	GVariant * propsParameters = g_variant_builder_end (&propsBuilder);
 
 	//Try to Verify first
-	std::cout << "Verifying parameters\n";
+	//std::cout << "Verifying parameters\n";
 	GVariant * displayParametersVerify = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
 	                                                    displayState.serial,
 	                                                    APPLY_MONITOR_CONFIG_METHOD_VERIFY,
 	                                                    logicalMonitorParameters,
 	                                                    propsParameters);
-	std::cout << "Constructing Perma\n";
+	//std::cout << "Constructing Perma\n";
 	GVariant * displayParametersPerma = g_variant_new (APPLY_MONITOR_CONFIG_PARAMETER,
 			                                   displayState.serial,
 			                                   APPLY_MONITOR_CONFIG_METHOD_PERSISTENT,
@@ -284,11 +284,12 @@ apply_display_state (const DisplayState &displayState)
 	                                      -1,
 	                                      NULL,
 	                                      &error);
-	g_error_free (error);
-	g_variant_unref (result);
+	
+	
 
-	if (error != NULL || result == NULL) {
+	if (error != NULL) {
 		g_warning ("Verify ApplyMonitorsConfig parameters failed: %d %s\n", error->code, error->message);
+		g_error_free (error);
 	} else { //Verification successful
 		std::cout << "Verification successful\n";						   
 		result = g_dbus_connection_call_sync (mainDbusConnection,
@@ -302,7 +303,7 @@ apply_display_state (const DisplayState &displayState)
 		                                      -1,
 		                                      NULL,
 		                                      NULL);
-		std::cout << "sync called\n";
+		//std::cout << "sync called\n";
 		//g_variant_unref (displayParametersPerma);
 	}
 
@@ -365,10 +366,10 @@ config_monitors_conf (const DisplayState   &displayState,
 				modeID = preferredModeID;
 			} else {
 				// At least some mode exists?
-				if (displayState.monitorsHash.at(sConnector).modes.size() != 0)
+				if (displayState.monitorsHash.at(sConnector).modes.size () != 0)
 					modeID = displayState.monitorsHash.at(sConnector).modes.at(0).id;
 				else
-					g_warning ("No mode found for connector %s\n", sConnector.c_str());
+					g_warning ("No mode found for connector %s\n", sConnector.c_str ());
 			}
 				
 		}
