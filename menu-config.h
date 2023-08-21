@@ -21,6 +21,7 @@
 #include "timingFunctions.h"
 
 #include <gtk/gtk.h>
+#include "display-settings-wrappers.h"
 //#include <libappindicator/app-indicator.h>
 //#include <libayatana-appindicator/app-indicator.h>
 
@@ -32,25 +33,27 @@
 // For better flexibility
 class SystemTrayMenu {
 private:
-	std::string     statusIconPath;
-	GtkStatusIcon  *statusIcon;
-	std::string     uiPath;
+	std::string       statusIconPath;
+	GtkStatusIcon    *statusIcon;
+	std::string       uiPath;
+ 
+	GtkWidget        *window;         //GtkWindow
+	GtkWidget        *mainGrid;       //GtkGrid
+	GtkWidget        *scaleBox;       //GtkBox
+	GtkWidget        *scaleDownBtn;   //GtkButton
+	GtkWidget        *scaleDisplayed; //GtkLabel
+	GtkWidget        *scaleUpBtn;     //GtkButton
+	GtkWidget        *resetBtn;       //GtkButton
+	GtkWidget        *taskSW;         //GtkSwitch
+	GtkWidget        *closeBtn;       //GtkButton
 
-	GtkWidget      *window;         //GtkWindow
-	GtkWidget      *mainGrid;       //GtkGrid
-	GtkWidget      *scaleBox;       //GtkBox
-	GtkWidget      *scaleDownBtn;   //GtkButton
-	GtkWidget      *scaleDisplayed; //GtkLabel
-	GtkWidget      *scaleUpBtn;     //GtkButton
-	GtkWidget      *resetBtn;       //GtkButton
-	GtkWidget      *taskSW;         //GtkSwitch
-	GtkWidget      *closeBtn;       //GtkButton
-
-	// Value displayed on scaleDisplayed can be values of [1,3] in 0.25 increments
+	// Value displayed on scaleDisplayed are percentage rouneded to 25%
 	// scaleValue is updated when the program is launched, but is then only
 	// ...updated internally, meaning external change will not be reflected
-	double          scaleValue;
-	std::string     scaleValueS;	
+	long unsigned int scaleIndex;
+	std::string       scaleValueS;
+	std::vector<int>  scaleKeys; //Approximate values
+	ScalesMap         supportedScales; //Approximate value : actual value
 
 public:        
 	SystemTrayMenu                              (std::string           newStatusIconPath, //path of a image file
@@ -71,8 +74,10 @@ public:
 
 	// Refresh the scaleDisplayed label, usually used after a change of scaleValueS
 	void            refresh_scale_displayed     ();
-	// Reset the position of the popup window, usually after a change of display scale
-	void            construct_window                ();
+	// Reset the status icon, used when the program starts or after a change of display scale
+	void            construct_status_icon       ();
+	// Reset everything in the popup window, used when the program starts or after a change of display scale
+	void            construct_window            ();
 
 	// Call back functions (wrapped by public functions for proper g_signal_connect)
 	// ...and their helpers

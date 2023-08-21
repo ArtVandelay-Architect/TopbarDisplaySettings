@@ -291,7 +291,7 @@ apply_display_state (const DisplayState &displayState)
 		g_warning ("Verify ApplyMonitorsConfig parameters failed: %d %s\n", error->code, error->message);
 		g_error_free (error);
 	} else { //Verification successful
-		std::cout << "Verification successful\n";						   
+		//std::cout << "Verification successful\n";						   
 		result = g_dbus_connection_call_sync (mainDbusConnection,
 		                                      "org.gnome.Mutter.DisplayConfig",
 		                                      "/org/gnome/Mutter/DisplayConfig",
@@ -337,7 +337,7 @@ GVariant *
 config_monitors_conf (const DisplayState   &displayState, 
                       const LogicalMonitor &logicalMonitor)
 {
-	std::cout << "Configuring monitors conf\n";
+	//std::cout << "Configuring monitors conf\n";
 	GVariantBuilder builder;
 	g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(" MONITOR_CONF ")"));
 
@@ -345,7 +345,7 @@ config_monitors_conf (const DisplayState   &displayState,
 		std::string sConnector = monitorSpec.connector;
 
 		// Mode
-		std::cout << "Configuring modes\n";
+		//std::cout << "Configuring modes\n";
 		std::string currentModeID = "", preferredModeID = "", modeID;
 		for (const auto& mode : displayState.monitorsHash.at(sConnector).modes) {
 			if (mode.props.count ("is-current") > 0) {
@@ -375,7 +375,7 @@ config_monitors_conf (const DisplayState   &displayState,
 		}
 
 		// Props
-		std::cout << "Configuring monitors conf props\n";
+		//std::cout << "Configuring monitors conf props\n";
 		GVariantBuilder propsBuilder;
 		g_variant_builder_init (&propsBuilder, G_VARIANT_TYPE("a{sv}"));
 		bool ens = false; //enable underscanning
@@ -387,7 +387,7 @@ config_monitors_conf (const DisplayState   &displayState,
 					       "enable_underscanning", 
 					       g_variant_new_boolean (ens));
 		} else {
-			std::cout << "No underscanning, adding place holder\n";
+			//std::cout << "No underscanning, adding place holder\n";
 			g_variant_builder_add (&propsBuilder, 
 			                       "{sv}", 
 					       "enable_underscanning", 
@@ -396,8 +396,8 @@ config_monitors_conf (const DisplayState   &displayState,
 
 		const gchar *gConnector = sConnector.c_str();
 		const gchar *gModeID = modeID.c_str();
-		printf ("pp %s\n", gModeID);
-		std::cout << "(" MONITOR_CONF ")" << "Assembling monitors conf\n";
+		printf ("Monitor mode: %s\n", gModeID);
+		//std::cout << "(" MONITOR_CONF ")" << "Assembling monitors conf\n";
 		g_variant_builder_add (&builder,
 		                       MONITOR_CONF_AT,
 				       gConnector,
@@ -405,10 +405,10 @@ config_monitors_conf (const DisplayState   &displayState,
 				       g_variant_builder_end (&propsBuilder));
 
 		
-		std::cout << "Finished assembling monitors conf\n";
+		//std::cout << "Finished assembling monitors conf\n";
 		//g_variant_unref (propsParameters);
 	}
-	std::cout << "Monitors conf: ready to return\n";
+	//std::cout << "Monitors conf: ready to return\n";
 	GVariant *res = g_variant_builder_end (&builder);
 	return res;
 }

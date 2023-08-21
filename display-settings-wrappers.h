@@ -19,36 +19,37 @@
  */
 
 #include <unordered_map>
+#include <vector>
 
 #ifndef DISPLAY_SETTINGS_WRAPPERS_H
 #define DISPLAY_SETTINGS_WRAPPERS_H
 
 typedef std::unordered_map<int, double> ScalesMap;
 
-// scales supported by the main monitor, keys are scaling percentage rounded to 25%
-ScalesMap supportedScales;
 
 // Sets the display scaling to `scale`, will be rounded to nearest 0.25
 // Returns the resulting scaling
-double set_display_scaling          (double scale);
+void      set_display_scaling          (double scale);
 // Multiply the current scaling by `scale factor`
 // Returns the resulting scaling factor
-double set_display_scaling_relative (double scaleFactor);
+double    set_display_scaling_relative (double scaleFactor);
 // Get the display scaling of one of the monitors
-double get_display_scaling          ();
+double    get_display_scaling          ();
 // Set the visibility of the taskbar
-void   set_taskbar_visibility       (bool   visible);
+void      set_taskbar_visibility       (bool   visible);
 // Send reset commands to modprobe for wacom `sudo modprobe -r wacom && sudo modprobe wacom`
-void   send_modprobe_reset_commands ();
+void      send_modprobe_reset_commands ();
 
 // Set and get fractional scaling mode
 // When executing, the program will automatically exit fractional scaling 
 // ...if the user sets the scaling mode to a whole number
-bool   get_fractional_scaling       ();
-void   set_fractional_scaling       (bool   mode);
+bool      get_fractional_scaling       ();
+void      set_fractional_scaling       (bool   mode);
 
-// Update global supportedScales, a ScalesMap storing scales supported
+// Returns supportedScales, a ScalesMap storing scales supported
 // ...by the main monitor, may be buggy on multi monitor systems
-void   update_supported_scales      ();
+// Also returns a vector of keys for the map, ascending,
+// As well as the index of the currently active scale
+ScalesMap get_supported_scales         (std::vector<int> &keys, long unsigned int &keyIndex);
 
 #endif

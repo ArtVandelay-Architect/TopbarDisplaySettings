@@ -23,31 +23,38 @@
 #include <cstdio>
 
 #include "display-config-API.h"
-#include "display-settings-wrappers.h"
+//#include "display-settings-wrappers.h"
+
+#include <cmath>
+
+bool isWholeNumber (double num, 
+                    double epsilon = 1e-10) 
+{
+	double fractionalPart = std::fabs (num - std::round (num));
+	return fractionalPart < epsilon;
+}
 
 SystemTrayMenu::SystemTrayMenu (std::string   newStatusIconPath,
 	                        std::string   newUiPath) :
-	statusIconPath (newStatusIconPath), 
-	statusIcon (nullptr), 
-	uiPath (newUiPath), 
-	window (nullptr),
-	mainGrid (nullptr),   
-	scaleBox (nullptr),    
-	scaleDownBtn (nullptr), 
-	scaleDisplayed (nullptr),
-	scaleUpBtn (nullptr),
-	resetBtn (nullptr),   
-	taskSW (nullptr),     
-	closeBtn (nullptr),
-	scaleValue (0),
-	scaleValueS ()
+	statusIconPath  (newStatusIconPath), 
+	statusIcon      (nullptr), 
+	uiPath          (newUiPath), 
+	window          (nullptr),
+	mainGrid        (nullptr),   
+	scaleBox        (nullptr),    
+	scaleDownBtn    (nullptr), 
+	scaleDisplayed  (nullptr),
+	scaleUpBtn      (nullptr),
+	resetBtn        (nullptr),   
+	taskSW          (nullptr),     
+	closeBtn        (nullptr),
+	scaleIndex      (0),
+	scaleValueS     (),
+	scaleKeys       (),
+	supportedScales ()
 {	
-	// Create a status icon and ignore the fact that it is deprecated
-	// Most "modern" ways of creating a system tray icon ended up using GtkStatusIcon anyways
-	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-	statusIcon = gtk_status_icon_new_from_file (statusIconPath.c_str ());
-	G_GNUC_END_IGNORE_DEPRECATIONS
 
+	construct_status_icon ();
 	construct_window ();
 	
 }
@@ -58,20 +65,22 @@ SystemTrayMenu::~SystemTrayMenu ()
 }
 
 SystemTrayMenu::SystemTrayMenu (const SystemTrayMenu& other) :
-	statusIconPath (other.get_status_icon_path ()), 
-	statusIcon (nullptr), 
-	uiPath (other.get_ui_path ()), 
-	window (nullptr),
-	mainGrid (nullptr),   
-	scaleBox (nullptr),    
-	scaleDownBtn (nullptr), 
-	scaleDisplayed (nullptr),
-	scaleUpBtn (nullptr),
-	resetBtn (nullptr),   
-	taskSW (nullptr),     
-	closeBtn (nullptr),
-	scaleValue (0),
-	scaleValueS ()
+	statusIconPath  (other.get_status_icon_path ()), 
+	statusIcon      (nullptr), 
+	uiPath          (other.get_ui_path ()), 
+	window          (nullptr),
+	mainGrid        (nullptr),   
+	scaleBox        (nullptr),    
+	scaleDownBtn    (nullptr), 
+	scaleDisplayed  (nullptr),
+	scaleUpBtn      (nullptr),
+	resetBtn        (nullptr),   
+	taskSW          (nullptr),     
+	closeBtn        (nullptr),
+	scaleIndex      (0),
+	scaleValueS     (),
+	scaleKeys       (),
+	supportedScales ()
 {
 	// Do nothing for now
 	/*
@@ -126,10 +135,23 @@ void SystemTrayMenu::status_icon_hide ()
 
 void SystemTrayMenu::refresh_scale_displayed ()
 {
-	scaleValueS = std::to_string (static_cast<int> (scaleValue*100)) + "%";
-	std::cout << "scaleValueS: " << scaleValueS << "\n";
+
+	scaleValueS = std::to_string (scaleKeys[scaleIndex]) + "%";
+	//std::cout << "scaleValueS: " << scaleValueS << "\n";
 	const char * scaleC = scaleValueS.c_str();
 	gtk_label_set_label (GTK_LABEL (scaleDisplayed), scaleC);
+
+}
+
+void SystemTrayMenu::construct_status_icon ()
+{
+	// Create a status icon and ignore the fact that it is deprecated
+	// Most "modern" ways of creating a system tray icon ended up using GtkStatusIcon anyways
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	statusIcon = gtk_status_icon_new_from_file (statusIconPath.c_str ());
+	G_GNUC_END_IGNORE_DEPRECATIONS
+	g_signal_connect (GTK_WIDGET (statusIcon), "activate", G_CALLBACK(status_icon_activated), this);
+
 
 }
 
@@ -140,8 +162,22 @@ void SystemTrayMenu::construct_window ()
 		gtk_widget_destroy (window);
 		window = NULL;
 	} else {
-		// This rounds the scaling and resets it if needed for first time booting
-		scaleValue = set_display_scaling (get_display_scaling ()); 
+		/* scaleIndex now updates with get_supported_scales
+		// Get the current scaleIndex by seraching through possible scales
+		// Not the most efficient, but I cannot be bothered
+		double scale = get_display_scaling ();
+		for (const auto& pair : supportedScales) {
+			if (scale == pair.second) {
+				for (int i = 0; i < scaleKeys.size(); i++) {
+					if (scaleKeys[i] == pair.first) {
+						scaleIndex = i;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		*/
 	}
 
 	// Build the popup window AKA menu
@@ -158,17 +194,21 @@ void SystemTrayMenu::construct_window ()
 	taskSW = GTK_WIDGET(gtk_builder_get_object(builder, "taskSW"));
 	closeBtn = GTK_WIDGET(gtk_builder_get_object(builder, "closeBtn"));
 
-	g_signal_connect (statusIcon, "activate", G_CALLBACK(stm_status_icon_activated), this);
+	
 	g_signal_connect (scaleDownBtn, "clicked", G_CALLBACK(stm_scale_down_btn_clicked), this);
 	g_signal_connect (scaleUpBtn, "clicked", G_CALLBACK(stm_scale_up_btn_clicked), this);
 	g_signal_connect (resetBtn, "clicked", G_CALLBACK(stm_reset_btn_clicked), this);
 	g_signal_connect (closeBtn, "clicked", G_CALLBACK(stm_close_btn_clicked), this);
 
-	if (scaleValue == 1)
+	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+
+	// If we are at extreme values, disable one button
+	if (scaleIndex == 0)
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
-	else if (scaleValue == 3)
+	else if (scaleIndex == (scaleKeys.size () - 1))
 		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
 
+	
 	refresh_scale_displayed ();
 
 }
@@ -177,9 +217,11 @@ void SystemTrayMenu::status_icon_activated ()
 {
 	std::cout << "Status icon activated\n";
 
-	int x=0, y=0;
+	int x=10, y=0;
 	GdkScreen *screen;
+
 	calculate_window_coordinate (x, y, screen);
+
 	gtk_window_move (GTK_WINDOW (window), x, y);
 	gtk_widget_show_all (window);
 	gtk_window_move (GTK_WINDOW (window), x, y);
@@ -222,27 +264,45 @@ void SystemTrayMenu::calculate_window_coordinate (int        &x,
 			y = 0;
 			std::cout << "Unknown displayLocation in calculate_window_coordinate\n";
 	}
-	std::cout << "x: " << x << " y: " << y << "\n";
-
+	std::cout << "x: " << x << " y: " << y <<"\n";
+	// TODO: figure out the screen dimension at high scale
 	
 }
 
 void SystemTrayMenu::scale_down_btn_clicked()
 {
-	scaleValue -= 0.25;
+	// Update the supported scales, in case the users did something funny outside the program
+	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+
+	// If fractional scaling is off, we should probably turn it on
+	if (!get_fractional_scaling ()) { 
+		set_fractional_scaling (true);
+		supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+	}
+
+	scaleIndex -= 1;
+
 	// Exception handling
-	if (scaleValue <= 1) 
-		scaleValue = set_display_scaling (1);
-	else
-		scaleValue = set_display_scaling (scaleValue);
+	if (scaleIndex > (scaleIndex + 1)) { //Unsigned integers can only have zero overflow
+		g_warning ("scale index underflow in scale_down_btn_clicked");
+		scaleIndex = 0;
+	} else {
+		set_display_scaling (supportedScales[scaleKeys[scaleIndex]]);
+	}
+
+	// If the scale is now a whole number, we should turn off fractional scaling
+	if (isWholeNumber (supportedScales[scaleKeys[scaleIndex]])) {
+		set_fractional_scaling (false);
+		supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+	}
 
 	// If the scales are not on the boundary, enable buttons
-	if (scaleValue < 3) {
+	if (scaleIndex < (scaleKeys.size() - 1)) {
 		gtk_widget_set_sensitive (scaleUpBtn, TRUE);
 	} else {
 		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
 	}
-	if (scaleValue > 1) {
+	if (scaleIndex > 0) {
 		gtk_widget_set_sensitive (scaleDownBtn, TRUE);
 	} else {
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
@@ -254,21 +314,45 @@ void SystemTrayMenu::scale_down_btn_clicked()
 
 void SystemTrayMenu::scale_up_btn_clicked()
 {
-	scaleValue += 0.25;
+	// Update the supported scales, in case the users did something funny outside the program
+	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+	
+	// If fractional scaling is off, we should probably turn it on
+	if (!get_fractional_scaling ()) { 
+		set_fractional_scaling (true);
+		supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+	}
+
+	for (const auto &scale : scaleKeys) {
+		std::cout << supportedScales[scale] << ":" << supportedScales[scale] << " ";
+	}
+	std::cout << scaleIndex << "\n";
+
+	scaleIndex += 1;
+
+	std::cout << scaleIndex << " " << scaleKeys[scaleIndex] << "\n";
+
 	// Exception handling
-	if (scaleValue >= 3) 
-		scaleValue = set_display_scaling (3);
-	else
-		scaleValue = set_display_scaling (scaleValue);
-	//std::cout << "AAAAAAAAAAAAAAAAADisplay setting engaged\n";
+	if (scaleIndex > (scaleKeys.size () - 1)) {
+		g_warning ("scale index underflow in scale_down_btn_clicked");
+		scaleIndex = 0;
+	} else {
+		set_display_scaling (supportedScales[scaleKeys[scaleIndex]]);
+	}
+
+	// If the scale is now a whole number, we should turn off fractional scaling
+	if (isWholeNumber (supportedScales[scaleKeys[scaleIndex]])) {
+		set_fractional_scaling (false);
+		supportedScales = get_supported_scales (scaleKeys, scaleIndex);
+	}
 
 	// If the scales are not on the boundary, enable buttons
-	if (scaleValue < 3) {
+	if (scaleIndex < (scaleKeys.size () - 1)) {
 		gtk_widget_set_sensitive (scaleUpBtn, TRUE);
 	} else {
 		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
 	}
-	if (scaleValue > 1) {
+	if (scaleIndex > 0) {
 		gtk_widget_set_sensitive (scaleDownBtn, TRUE);
 	} else {
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);

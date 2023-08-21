@@ -24,16 +24,12 @@
 #include <sstream>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 
-bool isWholeNumber (double num, 
-                    double epsilon = 1e-10) 
+void set_display_scaling (double scale) 
 {
-	double fractionalPart = std::fabs(num - std::round(num));
-	return fractionalPart < epsilon;
-}
-
-double set_display_scaling (double scale) 
-{
+	// No longer needed, exact scaling is now handled in get_supported_scales
+	/* 
 	// Approximate the scale to nearest 0.25
 	bool scaleSet = false;
 	for (double s = 1; s <= 3.1; s+=0.25){
@@ -54,6 +50,7 @@ double set_display_scaling (double scale)
 	} else {
 		set_fractional_scaling (true);
 	}
+	*/
 
 	DisplayState displayState;
 	update_display_state (displayState);
@@ -62,7 +59,7 @@ double set_display_scaling (double scale)
 	}
 
 	apply_display_state (displayState);
-	return scale;
+	//return scale;
 }
 
 double set_display_scaling_relative (double scaleFactor) //Buggy!
@@ -154,7 +151,7 @@ void set_fractional_scaling (bool mode)
 	std::string features = outputLines[0]; //Likely only one line
 
 	std::string mainCommand = "gsettings set org.gnome.mutter experimental-features \"";
-	std::cout << "Features: " << features << " " << (features == "@as []") << "\n";
+	//std::cout << "Features: " << features << " " << (features == "@as []") << "\n";
 	if (features == "@as []\n") { //No current features
 		if (mode) {
 			mainCommand = mainCommand + "['x11-randr-fractional-scaling']";
@@ -201,13 +198,26 @@ void set_fractional_scaling (bool mode)
 		
 }
 
-void update_supported_scales ()
+ScalesMap get_supported_scales (std::vector<int> &keys, long unsigned int &keyIndex)
 {
+	// scales supported by the main monitor, keys are scaling percentage rounded to 25%
+	ScalesMap supportedScales;
+
 	DisplayState displayState;
 	update_display_state (displayState);
 
 	// Only consider the first monitor for now
 	const auto monitor = displayState.monitors[0];
+	
+	//Find the corresponding logical monitor and the current scale
+	double currScale = 1;
+	for (const auto& logicalMonitor : displayState.logicalMonitors) {
+		for (const auto& monitorSpec : logicalMonitor.monitors) {
+			if (monitorSpec.connector == monitor.connector) {
+				currScale = logicalMonitor.scale;
+			}
+		}
+	}
 
 	// There does not exist a straight-forward way to find modes
 	// We must guess
@@ -223,9 +233,10 @@ void update_supported_scales ()
 			}
 		}
 		if (mode.props.count ("is-preferred") > 0) { //is-preferred will do
-			if (g_variant_get_boolean(mode.props.at ("is-preferred")))
+			if (g_variant_get_boolean(mode.props.at ("is-preferred"))) {
 				preferredModeFound = true;
 				currMode = mode;
+			}
 		}
 	}
 	if ((!currentModeFound) && (!preferredModeFound)) {
@@ -233,11 +244,11 @@ void update_supported_scales ()
 			currMode = monitor.modes.at(0);
 		} else {
 			g_warning ("Cannot find mode in update_supported_scales");
-			return;
+			return supportedScales;
 		}
 	}
 	
-	supportedScales.clear ();
+	keys.clear();
 	for (const double scale : currMode.supportedScales) {
 		// The keys are the nearest 25% of scales 
 		int minDiff = 1000, temp;
@@ -246,9 +257,19 @@ void update_supported_scales ()
 			if (temp > minDiff) {
 				key -= 25;
 				supportedScales[key] = scale;
+				keys.push_back (key);
 				break;
 			}
 			minDiff = temp;
 		}
 	}
+	std::sort (keys.begin(), keys.end());
+
+	for (long unsigned int i = 0; i < keys.size(); i++) {
+		if (supportedScales[keys[i]] == currScale) {
+			keyIndex = i;
+			break;
+		}
+	}
+	return supportedScales;
 }

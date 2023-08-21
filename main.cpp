@@ -48,26 +48,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	//SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
+	SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
 
-	//systemTrayMenu.status_icon_show ();
-
-	//set_display_scaling (1.5);
-
-	DisplayState displayState;
-
-	update_display_state (displayState);
-	
-	for (const auto& monitor : displayState.monitors) {
-		std::cout << "\nNumber of Modes: " << monitor.modes.size() << "\n";
-		for (const auto& mode : monitor.modes) {
-			std::cout << mode.id <<": Preferred scale: " << mode.preferredScale << "\n";
-			for (const auto& scale : mode.supportedScales) {
-				std::cout << scale << " ";
-			}
-			std::cout << "\n";
-		}
-	}
+	systemTrayMenu.status_icon_show ();
 
 	gtk_main();
 
