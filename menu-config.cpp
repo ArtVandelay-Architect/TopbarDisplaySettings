@@ -145,14 +145,22 @@ void SystemTrayMenu::refresh_scale_displayed ()
 
 void SystemTrayMenu::construct_status_icon ()
 {
+	if (statusIcon != NULL) {
+		G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+		gtk_status_icon_set_visible (statusIcon, FALSE);
+		G_GNUC_END_IGNORE_DEPRECATIONS	
+		g_object_unref (statusIcon);
+	}
 	// Create a status icon and ignore the fact that it is deprecated
 	// Most "modern" ways of creating a system tray icon ended up using GtkStatusIcon anyways
 	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	statusIcon = gtk_status_icon_new_from_file (statusIconPath.c_str ());
 	G_GNUC_END_IGNORE_DEPRECATIONS
-	g_signal_connect (GTK_WIDGET (statusIcon), "activate", G_CALLBACK(status_icon_activated), this);
+	g_signal_connect (statusIcon, "activate", G_CALLBACK(stm_status_icon_activated), this);
 
-
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	gtk_status_icon_set_visible (statusIcon, TRUE);
+	G_GNUC_END_IGNORE_DEPRECATIONS	
 }
 
 void SystemTrayMenu::construct_window ()
@@ -308,7 +316,7 @@ void SystemTrayMenu::scale_down_btn_clicked()
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
 	}
 
-	//refresh_scale_displayed ();
+	construct_status_icon ();
 	construct_window ();
 }
 
@@ -358,7 +366,7 @@ void SystemTrayMenu::scale_up_btn_clicked()
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
 	}
 
-	//refresh_scale_displayed ();
+	construct_status_icon ();
 	construct_window ();
 }
 
@@ -373,9 +381,8 @@ void SystemTrayMenu::close_btn_clicked()
 }
 
 
-
-void stm_status_icon_activated (GtkStatusIcon */*statusIcon*/,
-                                gpointer       userData)
+void stm_status_icon_activated (GtkStatusIcon */*statusIcon*/, 
+                                gpointer userData) 
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->status_icon_activated ();
