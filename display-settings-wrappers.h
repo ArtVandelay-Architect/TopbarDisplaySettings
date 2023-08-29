@@ -37,6 +37,8 @@ double    set_display_scaling_relative (double scaleFactor);
 double    get_display_scaling          ();
 // Set the visibility of the taskbar
 void      set_taskbar_visibility       (bool   visible);
+// Get the visibility of the taskbar
+bool      get_taskbar_visibility       ();
 // Send reset commands to modprobe for wacom `sudo modprobe -r wacom && sudo modprobe wacom`
 void      send_modprobe_reset_commands ();
 

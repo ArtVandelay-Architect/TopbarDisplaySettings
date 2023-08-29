@@ -84,7 +84,7 @@ public:
 	void            status_icon_activated       ();
 	void            calculate_window_coordinate (int                   &x, 
 	                                             int                   &y,
-						     GdkScreen            *&screen);
+                                                     GdkScreen            *&screen);
 
 	void            scale_down_btn_clicked      ();
            
@@ -93,24 +93,29 @@ public:
 	void            reset_btn_clicked           ();
            
 	void            close_btn_clicked           ();
+
+	void            task_sw_set                 (gboolean state);
 };
 
 // Call back functions with namespace stm_
-void stm_status_icon_activated  (GtkStatusIcon */*statusIcon*/,
-                                 gpointer       userData);
+void     stm_status_icon_activated  (GtkStatusIcon */*statusIcon*/,
+                                     gpointer       userData);
+    
+void     stm_scale_down_btn_clicked (GtkButton * /*scaleDownBtn*/,
+                                     gpointer   userData);
+    
+void     stm_scale_up_btn_clicked   (GtkButton * /*scaleUpBtn*/,
+                                     gpointer   userData);
+    
+void     stm_reset_btn_clicked      (GtkButton * /*resetBtn*/,
+                                     gpointer   userData);
+    
+void     stm_close_btn_clicked      (GtkButton * /*closeBtn*/,
+                                     gpointer   userData);
 
-void stm_scale_down_btn_clicked (GtkButton * /*scaleDownBtn*/,
-                                 gpointer   userData);
-
-void stm_scale_up_btn_clicked   (GtkButton * /*scaleUpBtn*/,
-                                 gpointer   userData);
-
-void stm_reset_btn_clicked      (GtkButton * /*resetBtn*/,
-                                 gpointer   userData);
-
-void stm_close_btn_clicked      (GtkButton * /*closeBtn*/,
-                                 gpointer   userData);
-
+gboolean stm_task_sw_set            (GtkSwitch * /*taskSW*/,
+                                     gboolean   state,
+                                     gpointer   userData);
 				
 
 #endif

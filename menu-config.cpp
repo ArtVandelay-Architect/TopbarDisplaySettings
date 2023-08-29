@@ -191,34 +191,37 @@ void SystemTrayMenu::construct_window ()
 	// Build the popup window AKA menu
 	GtkBuilder *builder = gtk_builder_new ();
 	gtk_builder_add_from_file (builder, uiPath.c_str (), NULL);
-	window = GTK_WIDGET (gtk_builder_get_object (builder, "popupWindow"));
+	window = GTK_WIDGET  (gtk_builder_get_object (builder, "popupWindow"));
 	//Grab all the other widget to be programmed
-	mainGrid = GTK_WIDGET(gtk_builder_get_object(builder, "mainGrid"));
-	scaleBox = GTK_WIDGET(gtk_builder_get_object(builder, "scaleBox"));
-	scaleDownBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDownBtn"));
-	scaleDisplayed = GTK_WIDGET(gtk_builder_get_object(builder, "scaleDisplayed"));
-	scaleUpBtn = GTK_WIDGET(gtk_builder_get_object(builder, "scaleUpBtn"));
-	resetBtn = GTK_WIDGET(gtk_builder_get_object(builder, "resetBtn"));
-	taskSW = GTK_WIDGET(gtk_builder_get_object(builder, "taskSW"));
-	closeBtn = GTK_WIDGET(gtk_builder_get_object(builder, "closeBtn"));
+	mainGrid = GTK_WIDGET (gtk_builder_get_object (builder, "mainGrid"));
+	scaleBox = GTK_WIDGET (gtk_builder_get_object (builder, "scaleBox"));
+	scaleDownBtn = GTK_WIDGET (gtk_builder_get_object (builder, "scaleDownBtn"));
+	scaleDisplayed = GTK_WIDGET (gtk_builder_get_object (builder, "scaleDisplayed"));
+	scaleUpBtn = GTK_WIDGET (gtk_builder_get_object (builder, "scaleUpBtn"));
+	resetBtn = GTK_WIDGET (gtk_builder_get_object(builder, "resetBtn"));
+	taskSW = GTK_WIDGET (gtk_builder_get_object (builder, "taskSW"));
+	closeBtn = GTK_WIDGET (gtk_builder_get_object (builder, "closeBtn"));
 
 	
-	g_signal_connect (scaleDownBtn, "clicked", G_CALLBACK(stm_scale_down_btn_clicked), this);
-	g_signal_connect (scaleUpBtn, "clicked", G_CALLBACK(stm_scale_up_btn_clicked), this);
-	g_signal_connect (resetBtn, "clicked", G_CALLBACK(stm_reset_btn_clicked), this);
-	g_signal_connect (closeBtn, "clicked", G_CALLBACK(stm_close_btn_clicked), this);
+	g_signal_connect (scaleDownBtn, "clicked", G_CALLBACK (stm_scale_down_btn_clicked), this);
+	g_signal_connect (scaleUpBtn, "clicked", G_CALLBACK (stm_scale_up_btn_clicked), this);
+	g_signal_connect (resetBtn, "clicked", G_CALLBACK (stm_reset_btn_clicked), this);
+	g_signal_connect (closeBtn, "clicked", G_CALLBACK (stm_close_btn_clicked), this);
+	g_signal_connect (taskSW, "state-set", G_CALLBACK (stm_task_sw_set), this);
 
+	// Get ready for scale changes
 	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
-
 	// If we are at extreme values, disable one button
 	if (scaleIndex == 0)
 		gtk_widget_set_sensitive (scaleDownBtn, FALSE);
 	else if (scaleIndex == (scaleKeys.size () - 1))
 		gtk_widget_set_sensitive (scaleUpBtn, FALSE);
 
-	
-	refresh_scale_displayed ();
+	// Set the taskbar switch's intial state 
+	bool taskbarVisibility = get_taskbar_visibility ();
+	gtk_switch_set_state (GTK_SWITCH (taskSW), taskbarVisibility);
 
+	refresh_scale_displayed ();
 }
 
 void SystemTrayMenu::status_icon_activated ()
@@ -277,7 +280,7 @@ void SystemTrayMenu::calculate_window_coordinate (int        &x,
 	
 }
 
-void SystemTrayMenu::scale_down_btn_clicked()
+void SystemTrayMenu::scale_down_btn_clicked ()
 {
 	// Update the supported scales, in case the users did something funny outside the program
 	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
@@ -320,7 +323,7 @@ void SystemTrayMenu::scale_down_btn_clicked()
 	construct_window ();
 }
 
-void SystemTrayMenu::scale_up_btn_clicked()
+void SystemTrayMenu::scale_up_btn_clicked ()
 {
 	// Update the supported scales, in case the users did something funny outside the program
 	supportedScales = get_supported_scales (scaleKeys, scaleIndex);
@@ -370,14 +373,19 @@ void SystemTrayMenu::scale_up_btn_clicked()
 	construct_window ();
 }
 
-void SystemTrayMenu::reset_btn_clicked()
+void SystemTrayMenu::reset_btn_clicked ()
 {
-
+	send_modprobe_reset_commands ();
 }
 
-void SystemTrayMenu::close_btn_clicked()
+void SystemTrayMenu::close_btn_clicked ()
 {
 	gtk_widget_hide (window);
+}
+
+void SystemTrayMenu::task_sw_set (gboolean state)
+{
+	set_taskbar_visibility (state);
 }
 
 
@@ -414,4 +422,13 @@ void stm_close_btn_clicked (GtkButton * /*closeBtn*/,
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->close_btn_clicked ();
+}
+
+gboolean stm_task_sw_set (GtkSwitch * /*taskSW*/,
+                          gboolean   state,
+                          gpointer   userData) 
+{
+	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
+	thisMenu->task_sw_set (state);
+	return false; //Allow the default handler to pass through as well
 }

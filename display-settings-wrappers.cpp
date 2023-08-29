@@ -97,6 +97,24 @@ void set_taskbar_visibility (bool visible)
 	}
 }
 
+bool get_taskbar_visibility ()
+{
+	// Use the command to get the state of visibility
+	const char * command = "gsettings get org.gnome.shell.extensions.dash-to-dock manualhide";
+	FILE* pipe = popen (command, "r");
+	char buffer[128];
+	std::vector<std::string> outputLines;
+	while (fgets (buffer, sizeof (buffer), pipe) != nullptr) {
+		outputLines.emplace_back (buffer);
+	}
+	pclose(pipe);
+	std::string state = outputLines[0]; //Only one line: true or false;
+
+	if (state == "true\n")
+		return false;
+	return true;
+}
+
 void send_modprobe_reset_commands ()
 {
 	int err;
