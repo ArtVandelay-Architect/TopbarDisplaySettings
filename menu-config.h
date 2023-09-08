@@ -78,6 +78,8 @@ public:
 	void            construct_status_icon       ();
 	// Reset everything in the popup window, used when the program starts or after a change of display scale
 	void            construct_window            ();
+	// Set a widget's background to red
+	void            set_widget_bkgd_to_red      (GtkWidget*             widget); 
 
 	// Call back functions (wrapped by public functions for proper g_signal_connect)
 	// ...and their helpers
@@ -98,24 +100,28 @@ public:
 };
 
 // Call back functions with namespace stm_
-void     stm_status_icon_activated  (GtkStatusIcon */*statusIcon*/,
-                                     gpointer       userData);
-    
-void     stm_scale_down_btn_clicked (GtkButton * /*scaleDownBtn*/,
-                                     gpointer   userData);
-    
-void     stm_scale_up_btn_clicked   (GtkButton * /*scaleUpBtn*/,
-                                     gpointer   userData);
-    
-void     stm_reset_btn_clicked      (GtkButton * /*resetBtn*/,
-                                     gpointer   userData);
-    
-void     stm_close_btn_clicked      (GtkButton * /*closeBtn*/,
-                                     gpointer   userData);
+void     stm_status_icon_activated      (GtkStatusIcon */*statusIcon*/,
+                                         gpointer       userData);
 
-gboolean stm_task_sw_set            (GtkSwitch * /*taskSW*/,
-                                     gboolean   state,
-                                     gpointer   userData);
-				
+gboolean stm_status_icon_button_pressed (GtkStatusIcon */*statusIcon*/,
+                                         GdkEventButton event,
+					 gpointer       userData);
+
+void     stm_scale_down_btn_clicked     (GtkButton     */*scaleDownBtn*/,
+                                         gpointer       userData);
+            
+void     stm_scale_up_btn_clicked       (GtkButton     */*scaleUpBtn*/,
+                                         gpointer       userData);
+            
+void     stm_reset_btn_clicked          (GtkButton     */*resetBtn*/,
+                                         gpointer       userData);
+            
+void     stm_close_btn_clicked          (GtkButton     */*closeBtn*/,
+                                         gpointer       userData);
+        
+gboolean stm_task_sw_set                (GtkSwitch     */*taskSW*/,
+                                         gboolean       state,
+                                         gpointer       userData);
+				    
 
 #endif

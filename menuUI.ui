@@ -11,27 +11,20 @@
       <object class="GtkGrid" id="mainGrid">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="column-homogeneous">True</property>
         <child>
           <object class="GtkLabel" id="scaleLabel">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="double-buffered">False</property>
+            <property name="halign">start</property>
+            <property name="margin-start">10</property>
             <property name="label" translatable="yes">Scaling</property>
+            <property name="width-chars">7</property>
+            <property name="max-width-chars">7</property>
           </object>
           <packing>
             <property name="left-attach">0</property>
             <property name="top-attach">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="resetLabel">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="label" translatable="yes">Reset Wacom</property>
-          </object>
-          <packing>
-            <property name="left-attach">0</property>
-            <property name="top-attach">4</property>
           </packing>
         </child>
         <child>
@@ -57,6 +50,8 @@
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">XX</property>
+                <property name="width-chars">4</property>
+                <property name="max-width-chars">4</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -85,21 +80,26 @@
         </child>
         <child>
           <object class="GtkButton" id="resetBtn">
-            <property name="label" translatable="yes">Reset</property>
+            <property name="label" translatable="yes">Reset Wacom</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
           </object>
           <packing>
-            <property name="left-attach">1</property>
+            <property name="left-attach">0</property>
             <property name="top-attach">4</property>
+            <property name="width">2</property>
           </packing>
         </child>
         <child>
           <object class="GtkLabel" id="taskLabel">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="halign">start</property>
+            <property name="margin-start">10</property>
             <property name="label" translatable="yes">Taskbar</property>
+            <property name="width-chars">7</property>
+            <property name="max-width-chars">7</property>
           </object>
           <packing>
             <property name="left-attach">0</property>
@@ -132,6 +132,7 @@
           <object class="GtkSwitch" id="taskSW">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
+            <property name="halign">center</property>
           </object>
           <packing>
             <property name="left-attach">1</property>
@@ -162,19 +163,6 @@
             <property name="width">2</property>
           </packing>
         </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkPopover" id="mainPopover">
-    <property name="can-focus">False</property>
-    <property name="relative-to">resetBtn</property>
-    <property name="position">bottom</property>
-    <property name="constrain-to">none</property>
-    <child>
-      <object class="GtkLabel">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="label" translatable="yes">TEST</property>
       </object>
     </child>
   </object>

@@ -156,7 +156,8 @@ void SystemTrayMenu::construct_status_icon ()
 	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	statusIcon = gtk_status_icon_new_from_file (statusIconPath.c_str ());
 	G_GNUC_END_IGNORE_DEPRECATIONS
-	g_signal_connect (statusIcon, "activate", G_CALLBACK(stm_status_icon_activated), this);
+	g_signal_connect (statusIcon, "activate", G_CALLBACK (stm_status_icon_activated), this);
+	//g_signal_connect (statusIcon, "button-press-event", G_CALLBACK (stm_status_icon_button_pressed), this);
 
 	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	gtk_status_icon_set_visible (statusIcon, TRUE);
@@ -221,7 +222,25 @@ void SystemTrayMenu::construct_window ()
 	bool taskbarVisibility = get_taskbar_visibility ();
 	gtk_switch_set_state (GTK_SWITCH (taskSW), taskbarVisibility);
 
+	set_widget_bkgd_to_red (gtk_bin_get_child (GTK_BIN (closeBtn)));
+
 	refresh_scale_displayed ();
+}
+
+void SystemTrayMenu::set_widget_bkgd_to_red (GtkWidget* widget) 
+{
+	gchar *css = g_strdup_printf ("%s { background-color: IndianRed; }",
+		                       gtk_widget_class_get_css_name (GTK_WIDGET_GET_CLASS (widget)));
+
+	GtkCssProvider *css_provider = gtk_css_provider_new ();
+	gtk_css_provider_load_from_data (css_provider, css, -1, nullptr);
+	gtk_style_context_add_provider (gtk_widget_get_style_context (widget),
+	                                GTK_STYLE_PROVIDER (css_provider),
+	                                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+	gtk_widget_show(widget);
+	
+	g_free(css);
 }
 
 void SystemTrayMenu::status_icon_activated ()
@@ -396,35 +415,44 @@ void stm_status_icon_activated (GtkStatusIcon */*statusIcon*/,
 	thisMenu->status_icon_activated ();
 }
 
-void stm_scale_down_btn_clicked (GtkButton * /*scaleDownBtn*/,
+gboolean stm_status_icon_button_pressed (GtkStatusIcon */*statusIcon*/,
+                                         GdkEventButton event,
+                                         gpointer /*userData*/)
+{
+	// Not Used
+	std::cout << "status icon button pressed: " << event.type << "\n";
+	return true;
+}
+
+void stm_scale_down_btn_clicked (GtkButton */*scaleDownBtn*/,
                                  gpointer userData)
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->scale_down_btn_clicked ();
 }
 
-void stm_scale_up_btn_clicked (GtkButton * /*scaleUpBtn*/,
+void stm_scale_up_btn_clicked (GtkButton */*scaleUpBtn*/,
                                gpointer userData)
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->scale_up_btn_clicked ();
 }
 
-void stm_reset_btn_clicked (GtkButton * /*resetBtn*/,
+void stm_reset_btn_clicked (GtkButton */*resetBtn*/,
                             gpointer userData)
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->reset_btn_clicked ();
 }
 
-void stm_close_btn_clicked (GtkButton * /*closeBtn*/,
+void stm_close_btn_clicked (GtkButton */*closeBtn*/,
                             gpointer userData)
 {
 	SystemTrayMenu* thisMenu = static_cast<SystemTrayMenu*> (userData);
 	thisMenu->close_btn_clicked ();
 }
 
-gboolean stm_task_sw_set (GtkSwitch * /*taskSW*/,
+gboolean stm_task_sw_set (GtkSwitch */*taskSW*/,
                           gboolean   state,
                           gpointer   userData) 
 {
@@ -432,3 +460,5 @@ gboolean stm_task_sw_set (GtkSwitch * /*taskSW*/,
 	thisMenu->task_sw_set (state);
 	return false; //Allow the default handler to pass through as well
 }
+
+

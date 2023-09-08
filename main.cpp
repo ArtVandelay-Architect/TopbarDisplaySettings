@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	SystemTrayMenu systemTrayMenu ("./testIcon.png", "./menuUI.ui");
+	SystemTrayMenu systemTrayMenu ("./DisplayIcon.png", "./menuUI.ui");
 
 	systemTrayMenu.status_icon_show ();
 
