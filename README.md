@@ -1,4 +1,5 @@
-# TopbarDisplaySettings
-An applet for gnome that offers a display settings menu on the topbar
+# Topbar Display Settings
 
-Work in Progress
+An applet that allows the adjustment of display scaling and some other simple display settings, it hides itself on the topbar and can be popped down without disturbing the existing window tiling
+
+The current version is built using Makefile
